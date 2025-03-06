@@ -10,7 +10,6 @@ import Home from './pages/Home';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import { Container } from '@mui/material';
->>>>>>> 334eeaf (bug fixed - Router Issue (react-router-dom) into (react-router))
 
 function App() {
   
@@ -21,6 +20,8 @@ function App() {
       <Router>
 =======
     <Router>
+      {/* Add Navbar component here */}
+      <Navbar />
       <Container>
 >>>>>>> 334eeaf (bug fixed - Router Issue (react-router-dom) into (react-router))
         <Routes>
