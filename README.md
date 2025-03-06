@@ -1,0 +1,1 @@
+# Smart-Campus-Management-System-ESOFT-KU-B12-GROUP-02_Frontend
