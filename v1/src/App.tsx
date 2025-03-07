@@ -6,6 +6,8 @@ import Contact from './pages/Contact';
 import Error404 from './pages/Error404';
 import { Container } from '@mui/material';
 import Navbar from './components/Navbar';
+import Login from './pages/Auth/Login';
+import Test from './pages/Test';
 
 function App() {
   
@@ -18,7 +20,8 @@ function App() {
     <Router>
       <Navbar />
       <Container 
-      
+   
+      className='mt-[100px]'
       >
         <Routes>
           <Route path="/" element={<Home />} />
@@ -33,6 +36,8 @@ function App() {
     </>
 =======
       </Container>
+      
+      <Footer />
     </Router>
   )
 }
