@@ -1,7 +1,7 @@
 // Navbar.tsx
 import React from 'react';
 import { AppBar, Toolbar, Typography, Button } from '@mui/material';
-import { Link } from 'react-router-dom';  // Import Link from react-router-dom for navigation
+import { Link } from 'react-router';  // Import Link from react-router-dom for navigation
 
 const Navbar: React.FC = () => {
   return (
