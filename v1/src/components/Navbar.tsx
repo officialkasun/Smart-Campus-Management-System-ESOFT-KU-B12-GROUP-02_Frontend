@@ -22,7 +22,9 @@ const Navbar: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'center' }}>
-            ESOFT
+            <Link to="/" className="text-blue-500">
+            <span className='text-white font-semibold'>SCMC <small>v1.0</small></span>
+            </Link>
           </Typography>
           <Button color="inherit" component={Link} to="/login">Login</Button>
           <Button color="inherit" component={Link} to="/register">Register</Button>
