@@ -8,6 +8,7 @@ import { Container } from '@mui/material';
 import Navbar from './components/Navbar';
 import Login from './pages/Auth/Login';
 import Test from './pages/Test';
+import Footer from './components/Footer';
 
 function App() {
   return (
@@ -15,7 +16,7 @@ function App() {
       <Navbar />
       <Container 
    
-      className='mt-[100px]'
+      className='mt-[100px] mb-[100px] flex items-center justify-center'
       >
         <Routes>
           <Route path="/" element={<Home />} />
@@ -26,6 +27,8 @@ function App() {
           <Route path="*" element={<Error404 />} />
         </Routes>
       </Container>
+      
+      <Footer />
     </Router>
   );
 }

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 
 const Error404 = () => {
   return (
-    <Container className='flex items-center justify-center absolute top-16 left-0 right-0 bottom-0'>
+    <Container className='flex items-center justify-center  top-16 left-0 right-0 bottom-0'>
       <div className='w-full flex text-center items-center justify-center'> 
         <Container 
           component={motion.div}
