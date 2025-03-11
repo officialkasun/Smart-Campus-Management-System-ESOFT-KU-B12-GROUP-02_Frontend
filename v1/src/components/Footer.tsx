@@ -49,11 +49,11 @@ const Footer = () => {
             <Box className="flex items-center mb-4">
               <SchoolIcon className="mr-2 text-3xl text-blue-300" />
               <Typography variant="h5" className="font-bold">
-                Smart Campus
+                SCMS
               </Typography>
             </Box>
             <Typography variant="body2" className="mb-4 text-gray-200">
-              Empowering education through smart technology solutions for a better campus experience.
+              Smart Campus Management System
             </Typography>
             <Box className="flex space-x-3">
               <Link to="#" className="p-2 bg-blue-800 hover:bg-blue-700 rounded-full transition-all duration-300 flex items-center justify-center w-10 h-10">
