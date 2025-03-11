@@ -7,6 +7,7 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { Box } from '@mui/system';
 import Cookies from 'js-cookie';
+import ThemeToggle from './ThemeToggle';
 
 const Navbar: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -87,16 +88,18 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <AppBar position="fixed">
+      <AppBar position="fixed" className="bg-primary">
         <Toolbar>
           <IconButton edge="start" color="inherit" aria-label="menu" onClick={toggleDrawer(true)}>
-            <MenuIcon />
+            <MenuIcon className="text-primary-content" />
           </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'center' }}>
-            <Link to="/" className="text-blue-500">
-              <span className='text-white font-semibold'>SCMC <small>v1.0</small></span>
+            <Link to="/" className="text-primary-content font-semibold">
+              SCMC <small>v1.0</small>
             </Link>
           </Typography>
+          
+          <ThemeToggle />
           
           {isLoggedIn ? (
             <>
@@ -105,7 +108,7 @@ const Navbar: React.FC = () => {
                   alt={userName} 
                   src="/static/images/avatar/1.jpg" 
                   onClick={handleAvatarClick}
-                  className="cursor-pointer hover:opacity-80 transition-opacity"
+                  className="cursor-pointer hover:opacity-80 transition-opacity ml-2"
                 />
               </div>
               <Menu
@@ -114,66 +117,65 @@ const Navbar: React.FC = () => {
                 onClose={handleMenuClose}
                 PaperProps={{
                   elevation: 3,
-                  className: "mt-2"
+                  className: "mt-2 bg-base-100"
                 }}
               >
-                <MenuItem component={Link} to="/account" onClick={handleMenuClose}>
-                  <ListItemIcon>
-                    <AccountCircleIcon fontSize="small" className="text-gray-700" />
+                <MenuItem component={Link} to="/account" onClick={handleMenuClose} className="hover:bg-base-200">
+                  <ListItemIcon className='text-red-500'>
+                    <span className='text-blue-600'><AccountCircleIcon fontSize="small" className="text-c" /></span>
                   </ListItemIcon>
-                  <span className="text-gray-800">My Account</span>
+                  <span className="text-base-content">My Account</span>
                 </MenuItem>
-                <MenuItem component={Link} to={`/${userRole}/dashboard`} onClick={handleMenuClose}>
+                <MenuItem component={Link} to={`/${userRole}/dashboard`} onClick={handleMenuClose} className="hover:bg-base-200">
                   <ListItemIcon>
-                    <DashboardIcon fontSize="small" className="text-gray-700" />
+                  <span className='text-orange-600'><DashboardIcon fontSize="small" className="text-base-content" /> </span>
                   </ListItemIcon>
-                  <span className="text-gray-800">Dashboard</span>
+                  <span className="text-base-content">Dashboard</span>
                 </MenuItem>
-                <MenuItem onClick={handleLogout}>
+                <MenuItem onClick={handleLogout} className="hover:bg-base-200">
                   <ListItemIcon>
-                    <LogoutIcon fontSize="small" className="text-gray-700" />
+                  <span className='text-red-600'><LogoutIcon fontSize="small" className="text-base-content" /></span>
                   </ListItemIcon>
-                  <span className="text-gray-800">Logout</span>
+                  <span className="text-red-600 font-semibold">Logout</span>
                 </MenuItem>
               </Menu>
             </>
           ) : (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 ml-2">
               <Button 
                 color="inherit" 
                 component={Link} 
                 to="/login"
-                className="hover:bg-blue-700 transition-colors"
+                className="text-white hover:bg-primary-focus transition-colors"
               >
-                Login
+                <span className='text-white'>Login</span>
               </Button>
-              <Button 
-                color="inherit" 
-                component={Link} 
-                to="/register"
-                className="hover:bg-blue-700 transition-colors"
-              >
-                Register
-              </Button>
+              
             </div>
           )}
         </Toolbar>
       </AppBar>
-      <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
+      <Drawer 
+        anchor="left" 
+        open={drawerOpen} 
+        onClose={toggleDrawer(false)} 
+        PaperProps={{ className: "bg-base-100" }}
+      >
         <Box
           sx={{ width: 250 }}
           role="presentation"
           onClick={toggleDrawer(false)}
           onKeyDown={toggleDrawer(false)}
+          className="text-base-content"
         >
           <List>
-            <ListItem  component={Link} to="#">
+            <ListItem component={Link} to="#" className="hover:bg-base-200">
               <ListItemText primary="Link 1" />
             </ListItem>
-            <ListItem  component={Link} to="#">
+            <ListItem component={Link} to="#" className="hover:bg-base-200">
               <ListItemText primary="Link 2" />
             </ListItem>
-            <ListItem  component={Link} to="#">
+            <ListItem component={Link} to="#" className="hover:bg-base-200">
               <ListItemText primary="Link 3" />
             </ListItem>
           </List>

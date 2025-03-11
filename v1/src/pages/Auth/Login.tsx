@@ -82,7 +82,7 @@ const Login = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 w-full">
+    <div className="flex items-center justify-center min-h-screen  w-full">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -158,13 +158,18 @@ const Login = () => {
                       </InputAdornment>
                     ),
                     endAdornment: (
-                      <InputAdornment position="end">
+                      
+                      <InputAdornment position="end" >
+                       
                         <IconButton
                           onClick={togglePasswordVisibility}
                           edge="end"
+                          color='primary'
+                          
                         >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
+                     
                       </InputAdornment>
                     ),
                   }}
@@ -175,23 +180,18 @@ const Login = () => {
                 <motion.div
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
+                  
                 >
-                  <Button
+                  <button
                     type="submit"
-                    fullWidth
-                    variant="contained"
-                    sx={{ 
-                      mt: 3, 
-                      mb: 2, 
-                      py: 1.5, 
-                      bgcolor: 'primary.main',
-                      '&:hover': {
-                        bgcolor: 'primary.dark',
-                      }
-                    }}
+                  
+                    
+                    className='btn w-full p-4  mt-5  rounded-lg shadow-2xl bg-blue-500 hover-bg-700 text-white font-semibold cursor-pointer'
+                   
+                   
                   >
-                    Sign In
-                  </Button>
+                    <span >Login</span>
+                  </button>
                 </motion.div>
                 
                 <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>

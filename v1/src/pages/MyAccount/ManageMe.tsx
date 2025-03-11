@@ -11,11 +11,7 @@ import {
   Divider, 
   Chip,
   Grid,
-  CircularProgress,
   Box,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -24,9 +20,6 @@ import {
   School as SchoolIcon,
   Badge as BadgeIcon,
   Verified as VerifiedIcon,
-  ExpandMore as ExpandMoreIcon,
-  MenuBook as MenuBookIcon,
-  Schedule as ScheduleIcon,
   AccessTime as AccessTimeIcon
 } from '@mui/icons-material';
 
@@ -64,9 +57,7 @@ interface Course {
 
 const ManageMe = () => {
   const [userData, setUserData] = useState<any>(null);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+
 
   useEffect(() => {
     // Try to get the user cookie using js-cookie library
@@ -77,48 +68,19 @@ const ManageMe = () => {
         const parsedUserData = JSON.parse(userCookie);
         setUserData(parsedUserData);
         
-        // If user has courses, fetch their details
-        if (parsedUserData.courses && parsedUserData.courses.length > 0) {
-          fetchCourses(parsedUserData.courses);
-        }
+        
+        
       } catch (error) {
         console.error('Error parsing user cookie:', error);
       }
     }
   }, []);
 
-  const fetchCourses = async (courseIds: string[]) => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      const token = Cookies.get('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
 
-      const coursePromises = courseIds.map(id => 
-        axios.get(`${config.apiUrl}/api/courses/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-      );
-      
-      const responses = await Promise.all(coursePromises);
-      const fetchedCourses = responses.map(response => response.data);
-      setCourses(fetchedCourses);
-    } catch (err) {
-      console.error('Error fetching courses:', err);
-      setError('Failed to load course information');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <motion.div 
-      className="p-4 md:p-8 min-h-screen w-full bg-gray-50"
+      className="p-4 md:p-8 min-h-screen w-full bg-secondary"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -126,7 +88,7 @@ const ManageMe = () => {
       <Typography 
         variant="h4" 
         component="h1" 
-        className="text-center md:text-left font-bold text-blue-800 mb-6"
+        className="text-center md:text-left font-bold text-primary mb-6 p-4"
       >
         My Account
       </Typography>
@@ -244,10 +206,10 @@ const ManageMe = () => {
                           <PersonIcon className="text-blue-600 mr-3" />
                           <div>
                             <Typography variant="body2" color="textSecondary">
-                              Full Name
+                              <span className="font-semibold">Full Name</span>
                             </Typography>
-                            <Typography variant="body1">
-                              {userData.name}
+                            <Typography variant="body1" color="textSecondary">
+                              <span>{userData.name}</span>
                             </Typography>
                           </div>
                         </div>
@@ -255,11 +217,11 @@ const ManageMe = () => {
                         <div className="flex items-center">
                           <BadgeIcon className="text-blue-600 mr-3" />
                           <div>
-                            <Typography variant="body2" color="textSecondary">
-                              User ID
+                          <Typography variant="body2" color="textSecondary">
+                              <span className="font-semibold">User ID</span>
                             </Typography>
-                            <Typography variant="body1">
-                              {userData.id}
+                            <Typography variant="body1" color="textSecondary">
+                              <span>{userData.id}</span>
                             </Typography>
                           </div>
                         </div>
@@ -267,12 +229,13 @@ const ManageMe = () => {
                         <div className="flex items-center">
                           <AccessTimeIcon className="text-blue-600 mr-3" />
                           <div>
-                            <Typography variant="body2" color="textSecondary">
-                              Account Created
+                          <Typography variant="body2" color="textSecondary">
+                              <span className="font-semibold">Account Created</span>
                             </Typography>
-                            <Typography variant="body1">
-                              {new Date(userData.createdAt).toLocaleString()}
+                            <Typography variant="body1" color="textSecondary">
+                              <span>{new Date(userData.createdAt).toLocaleString()}</span>
                             </Typography>
+                      
                           </div>
                         </div>
                       </Box>
