@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import config from '../../config';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   TextField, 
   Button, 
@@ -23,6 +24,29 @@ const Login = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = Cookies.get('token');
+    const userCookie = Cookies.get('user');
+    
+    if (token && userCookie) {
+      try {
+        const user = JSON.parse(userCookie);
+        const role = user.role?.toLowerCase() || 'user';
+        
+        // Navigate to role-specific dashboard
+        navigate(`/${role}/dashboard`);
+        console.log(`Redirecting to /${role}/dashboard`);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // If there's an error parsing user data, clear cookies and stay on login page
+        Cookies.remove('token');
+        Cookies.remove('user');
+      }
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,13 +55,24 @@ const Login = () => {
         email,
         password,
       });
-      setSuccess('Login successful');
+      
+      // Store user data and token in cookies for session management
       Cookies.set('user', JSON.stringify(response.data.user));
       Cookies.set('token', response.data.token);
-      console.log(response.data);
-      // Handle the response data as needed
+      
+      setSuccess('Login successful! Redirecting...');
+      
+      // Get user role and create the appropriate dashboard URL
+      const role = response.data.user.role?.toLowerCase() || 'user';
+      const dashboardUrl = `/${role}/dashboard`;
+      
+      // Wait a short moment before redirecting for better UX
+      setTimeout(() => {
+        navigate(dashboardUrl);
+      }, 1000);
+      
     } catch (err) {
-      setError('Login failed');
+      setError('Login failed. Please check your credentials and try again.');
       console.error(err);
     }
   };

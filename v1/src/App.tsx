@@ -8,6 +8,7 @@ import { Container } from '@mui/material';
 import Navbar from './components/Navbar';
 import Login from './pages/Auth/Login';
 import Test from './pages/Test';
+import Footer from './components/Footer';
 
 function App() {
   
@@ -26,6 +27,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/test" element={<Test />} />
+          <Route path="/admin/dashboard" element={<Dashboard />} />
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
