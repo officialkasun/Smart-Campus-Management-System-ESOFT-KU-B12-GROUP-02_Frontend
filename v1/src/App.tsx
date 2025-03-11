@@ -10,19 +10,21 @@ import Login from './pages/Auth/Login';
 import Test from './pages/Test';
 import Footer from './components/Footer';
 import Dashboard from './pages/Admin/Dashboard/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <Router>
       <Navbar />
       <Container 
-   
       className='mt-[100px] mb-[100px] flex items-center justify-center'
       >
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/test" element={<Test />} />
-          <Route path="/admin/dashboard" element={<Dashboard />} />
+          <Route path="/admin/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="admin" />} />
+          <Route path="/lecturer/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="lecturer" />} />
+          <Route path="/student/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="student" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
