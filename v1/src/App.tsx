@@ -9,7 +9,7 @@ import Navbar from './components/Navbar';
 import Login from './pages/Auth/Login';
 import Test from './pages/Test';
 import Footer from './components/Footer';
-import Dashboard from './pages/Admin/Dashboard/Dashboard';
+import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
