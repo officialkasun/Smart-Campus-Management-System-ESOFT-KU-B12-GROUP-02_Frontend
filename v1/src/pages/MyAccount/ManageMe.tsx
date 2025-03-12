@@ -3,6 +3,7 @@ import Cookies from 'js-cookie';
 import axios from 'axios';
 import config from '../../config';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -12,6 +13,18 @@ import {
   Chip,
   Grid,
   Box,
+  Button,
+  Modal,
+  TextField,
+  InputAdornment,
+  IconButton,
+  Alert,
+  LinearProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -20,44 +33,67 @@ import {
   School as SchoolIcon,
   Badge as BadgeIcon,
   Verified as VerifiedIcon,
-  AccessTime as AccessTimeIcon
+  AccessTime as AccessTimeIcon,
+  Visibility,
+  VisibilityOff,
+  Lock as LockIcon,
 } from '@mui/icons-material';
 
-// Course type definition based on the API response
-interface Instructor {
-  _id: string;
-  name: string;
-  email: string;
-}
 
-interface Student {
-  _id: string;
-  name: string;
-  email: string;
-}
+// Password strength checker
+const checkPasswordStrength = (password: string) => {
+  let strength = 0;
+  
+  // Length check
+  if (password.length >= 8) strength += 25;
+  
+  // Contains lowercase letters
+  if (password.match(/[a-z]+/)) strength += 25;
+  
+  // Contains uppercase letters
+  if (password.match(/[A-Z]+/)) strength += 25;
+  
+  // Contains numbers
+  if (password.match(/[0-9]+/)) strength += 15;
+  
+  // Contains special characters
+  if (password.match(/[$@#&!]+/)) strength += 10;
 
-interface Schedule {
-  day: string;
-  startTime: string;
-  endTime: string;
-}
+  return strength;
+};
 
-interface Course {
-  _id: string;
-  name: string;
-  code: string;
-  description: string;
-  instructor: Instructor;
-  students: Student[];
-  schedule: Schedule;
-  lectureMaterials: any[];
-  createdAt: string;
-  __v: number;
-}
+// Get password strength label
+const getPasswordStrengthLabel = (strength: number) => {
+  if (strength < 25) return "Very Weak";
+  if (strength < 50) return "Weak";
+  if (strength < 75) return "Moderate";
+  if (strength < 90) return "Strong";
+  return "Very Strong";
+};
+
+// Get color based on strength
+const getPasswordStrengthColor = (strength: number) => {
+  if (strength < 25) return "error.main";
+  if (strength < 50) return "error.light";
+  if (strength < 75) return "warning.main";
+  if (strength < 90) return "info.main";
+  return "success.main";
+};
 
 const ManageMe = () => {
   const [userData, setUserData] = useState<any>(null);
-
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Try to get the user cookie using js-cookie library
@@ -76,7 +112,117 @@ const ManageMe = () => {
     }
   }, []);
 
+  const handleOpenPasswordModal = () => {
+    setPasswordModalOpen(true);
+    // Reset fields when opening modal
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+    setPasswordSuccess('');
+    setPasswordStrength(0);
+  };
 
+  const handleClosePasswordModal = () => {
+    setPasswordModalOpen(false);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const password = e.target.value;
+    setNewPassword(password);
+    setPasswordStrength(checkPasswordStrength(password));
+  };
+
+  const handleSubmitPasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+
+    // Validate password length
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+
+    // Validate password complexity
+    if (passwordStrength < 50) {
+      setPasswordError('Password is too weak. Include uppercase, lowercase, numbers and symbols.');
+      return;
+    }
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords don't match");
+      return;
+    }
+
+    // Check for spaces
+    if (newPassword.includes(' ')) {
+      setPasswordError('Password cannot contain spaces');
+      return;
+    }
+
+    // Check if new password is the same as current password
+    if (newPassword === currentPassword) {
+      setPasswordError('New password cannot be the same as your current password');
+      return;
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const response = await axios.put(
+        `${config.apiUrl}/api/users/change-password`, 
+        {
+          currentPassword,
+          newPassword
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      console.log(response.data);
+      
+
+      setPasswordSuccess('Password changed successfully!');
+      
+      // Clear form fields
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      // Open logout dialog
+      setTimeout(() => {
+        setLogoutDialogOpen(true);
+      }, 1500);
+      
+    } catch (error: any) {
+      setPasswordError(
+        error.response?.data?.message || 
+        'Failed to change password. Please try again.'
+      );
+    }
+  };
+
+  const handleLogout = () => {
+    // Clear cookies
+    Cookies.remove('token');
+    Cookies.remove('user');
+    
+    // Close both dialogs
+    setLogoutDialogOpen(false);
+    setPasswordModalOpen(false);
+    
+    // Redirect to login
+    navigate('/login');
+  };
+
+  const handleStayLoggedIn = () => {
+    setLogoutDialogOpen(false);
+    setPasswordModalOpen(false);
+  };
 
   return (
     <motion.div 
@@ -119,6 +265,19 @@ const ManageMe = () => {
                     color="primary" 
                     className="mt-2" 
                   />
+                  
+                  {/* Password Change Button */}
+                  <div className='w-full mt-10 justify-center flex'>
+                  <button 
+                    
+                  
+                    onClick={handleOpenPasswordModal}
+                    className="btn flex flex-row justify-center items-center bg-orange-500 p-3 rounded-3xl shadow-2xl hover:bg-orange-600 hover:scale-105 text-white gap-2 mt-4 cursor-pointer"
+                    
+                  >
+                    <LockIcon /> Change Password
+                  </button>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
@@ -265,6 +424,173 @@ const ManageMe = () => {
           </Card>
         </motion.div>
       )}
+
+      {/* Password Change Modal */}
+      <Modal
+        open={passwordModalOpen}
+        onClose={handleClosePasswordModal}
+        aria-labelledby="password-change-modal"
+       
+
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+            <span className=' font-semibold text-orange-600'>Change Password</span>
+          </Typography>
+          
+          {passwordError && (
+            <Alert severity="error" sx={{ mb: 2 }}>{passwordError}</Alert>
+          )}
+          
+          {passwordSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>{passwordSuccess}</Alert>
+          )}
+          
+          <Box component="form" onSubmit={handleSubmitPasswordChange} sx={{ mt: 1 }}>
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="currentPassword"
+              label="Current Password"
+              type={showCurrentPassword ? 'text' : 'password'}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      edge="end"
+                    >
+                      {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="newPassword"
+              label="New Password"
+              type={showNewPassword ? 'text' : 'password'}
+              value={newPassword}
+              onChange={handlePasswordChange}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      edge="end"
+                    >
+                      {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            
+            {newPassword && (
+              <Box sx={{ mt: 1, mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                  <Typography variant="caption">
+                    Password Strength: {getPasswordStrengthLabel(passwordStrength)}
+                  </Typography>
+                  <Typography variant="caption">{passwordStrength}%</Typography>
+                </Box>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={passwordStrength} 
+                  sx={{ 
+                    height: 8, 
+                    borderRadius: 4,
+                    bgcolor: 'grey.200',
+                    '& .MuiLinearProgress-bar': {
+                      bgcolor: getPasswordStrengthColor(passwordStrength)
+                    }
+                  }}
+                />
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Password must have at least 8 characters with a mix of uppercase, lowercase, numbers, and symbols.
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="confirmPassword"
+              label="Confirm Password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              error={confirmPassword !== '' && newPassword !== confirmPassword}
+              helperText={confirmPassword !== '' && newPassword !== confirmPassword ? "Passwords don't match" : ""}
+            />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+              <Button 
+                onClick={handleClosePasswordModal} 
+                variant="outlined"
+              >
+                Cancel
+              </Button>
+                <button 
+                type="submit" 
+                className="btn bg-orange-500 p-3 rounded-3xl shadow-lg hover:bg-orange-600 hover:scale-105 cursor-pointer text-white"
+                disabled={!currentPassword || !newPassword || !confirmPassword || passwordSuccess !== ''}
+                >
+                Change Password
+                </button>
+            </Box>
+          </Box>
+        </div>
+      </Modal>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog
+        open={logoutDialogOpen}
+        onClose={handleStayLoggedIn}
+        aria-labelledby="logout-dialog-title"
+      >
+        <DialogTitle id="logout-dialog-title">
+          <span className='font-semibold text-green-600'>Logout Confirmation</span>
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            <span className='text-black dark:text-white'>Would you like to stay logged in or log out now?</span>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleStayLoggedIn} color="primary">
+            Stay Logged In
+          </Button>
+            <button 
+            onClick={handleLogout} 
+            className="btn bg-red-500 p-3 rounded-3xl shadow-lg hover:bg-red-600 hover:scale-105 cursor-pointer text-white"
+            >
+            Log Out
+            </button>
+        </DialogActions>
+      </Dialog>
     </motion.div>
   );
 }

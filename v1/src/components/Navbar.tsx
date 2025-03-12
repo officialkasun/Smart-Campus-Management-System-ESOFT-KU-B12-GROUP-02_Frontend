@@ -15,8 +15,27 @@ const Navbar: React.FC = () => {
   const [userRole, setUserRole] = useState('');
   const [userName, setUserName] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [theme, setTheme] = useState<string>(() => {
+    // Get initial theme from HTML data-theme attribute or localStorage
+    return document.documentElement.getAttribute('data-theme') || 
+           localStorage.getItem('theme') || 
+           'light';
+  });
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Function to toggle theme (was missing)
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+
+  // Apply theme on component mount and when theme changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Function to check user auth status
   const checkUserAuth = () => {
@@ -99,7 +118,7 @@ const Navbar: React.FC = () => {
             </Link>
           </Typography>
           
-          <ThemeToggle />
+          <ThemeToggle currentTheme={theme} toggleTheme={toggleTheme} />
           
           {isLoggedIn ? (
             <>

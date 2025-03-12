@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 /* Theme transition styles */
 body {
   transition: background-color 0.3s ease, color 0.3s ease;
