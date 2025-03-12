@@ -1,5 +1,5 @@
 import React, { useState, useEffect, MouseEvent } from 'react';
-import { AppBar, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem, ListItemText, Avatar, Menu, MenuItem, ListItemIcon } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, IconButton, Drawer, Avatar, Menu, MenuItem, ListItemIcon } from '@mui/material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
@@ -8,6 +8,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import { Box } from '@mui/system';
 import Cookies from 'js-cookie';
 import ThemeToggle from './ThemeToggle';
+import { AdminSidebar, StudentSidebar, LecturerSidebar, GuestSidebar } from './Sidebars';
 
 const Navbar: React.FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -113,8 +114,8 @@ const Navbar: React.FC = () => {
             <MenuIcon className="text-primary-content" />
           </IconButton>
           <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'center' }}>
-            <Link to="/" className="text-primary-content font-semibold">
-              SCMC <small>v1.0</small>
+            <Link to="/" className=" font-semibold">
+              <span className='text-white dark:text-amber-300'>SCMC <small>v1.0</small></span>
             </Link>
           </Typography>
           
@@ -143,13 +144,13 @@ const Navbar: React.FC = () => {
                   <ListItemIcon className='text-red-500'>
                     <span className='text-blue-600'><AccountCircleIcon fontSize="small" className="text-c" /></span>
                   </ListItemIcon>
-                  <span className="text-base-content">My Account</span>
+                  <span className="text-blue-600">My Account</span>
                 </MenuItem>
                 <MenuItem component={Link} to={`/${userRole}/dashboard`} onClick={handleMenuClose} className="hover:bg-base-200">
                   <ListItemIcon>
                   <span className='text-orange-600'><DashboardIcon fontSize="small" className="text-base-content" /> </span>
                   </ListItemIcon>
-                  <span className="text-base-content">Dashboard</span>
+                  <span className=" text-orange-600">Dashboard</span>
                 </MenuItem>
                 <MenuItem onClick={handleLogout} className="hover:bg-base-200">
                   <ListItemIcon>
@@ -187,17 +188,17 @@ const Navbar: React.FC = () => {
           onKeyDown={toggleDrawer(false)}
           className="text-base-content"
         >
-          <List>
-            <ListItem component={Link} to="#" className="hover:bg-base-200">
-              <ListItemText primary="Link 1" />
-            </ListItem>
-            <ListItem component={Link} to="#" className="hover:bg-base-200">
-              <ListItemText primary="Link 2" />
-            </ListItem>
-            <ListItem component={Link} to="#" className="hover:bg-base-200">
-              <ListItemText primary="Link 3" />
-            </ListItem>
-          </List>
+          {!isLoggedIn ? (
+            <GuestSidebar />
+          ) : userRole === 'admin' ? (
+            <AdminSidebar />
+          ) : userRole === 'student' ? (
+            <StudentSidebar />
+          ) : userRole === 'lecturer' ? (
+            <LecturerSidebar />
+          ) : (
+            <GuestSidebar />
+          )}
         </Box>
       </Drawer>
     </>
