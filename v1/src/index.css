@@ -16,7 +16,7 @@
   --footer-text: theme('colors.white');
 }
 
-.dark-theme {
+[data-theme=dark] {
   /* Dark theme variables using Tailwind colors */
   --bg-color: theme('colors.gray.700');
   --bg-secondary: theme('colors.gray.800');
