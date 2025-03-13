@@ -7,7 +7,7 @@ import Error404 from './pages/Public/Error404';
 import { Container } from '@mui/material';
 import Navbar from './components/Navbar';
 import Login from './pages/Auth/Login';
-import Test from './pages/Test';
+import Test from './pages/Features/Lecturer/Test';
 import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -22,9 +22,14 @@ function App() {
       >
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/test" element={<Test />} />
+      
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="admin" />} />
           <Route path="/lecturer/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="lecturer" />} />
+
+          //Dilhans Part
+          <Route path="/lecturer/courses" element={<Test />} />
+          //close Dilhans Part
+
           <Route path="/student/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="student" />} />
           <Route path="/account"  element={<ProtectedRoute element={<ManageMe />} allowedRole="" />}/>
           <Route path="/login" element={<Login />} />
