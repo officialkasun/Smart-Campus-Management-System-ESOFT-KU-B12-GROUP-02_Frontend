@@ -3,7 +3,7 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import config from '../config';
 
-function Test() {
+function TestKasun() {
   const [users, setUsers] = useState<{ id: number; name: string }[]>([]);
 
   const fetchData = async () => {
@@ -33,4 +33,4 @@ function Test() {
   );
 }
 
-export default Test;
+export default TestKasun;

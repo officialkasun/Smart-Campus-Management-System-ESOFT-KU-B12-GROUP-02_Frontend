@@ -14,6 +14,7 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 // Lecturer Icons
 import GradeIcon from '@mui/icons-material/Grade';
 import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import LocalLibraryIcon from '@mui/icons-material/LocalLibrary';
 
 // Guest Icons
 import HomeIcon from '@mui/icons-material/Home';
@@ -125,7 +126,7 @@ const navigationConfig: RoleNavConfig = {
       id: 'courses',
       title: 'My Courses',
       description: 'Manage your teaching courses',
-      icon: <MenuBookIcon fontSize="large" className="text-blue-600 dark:text-blue-400" />,
+      icon: <LocalLibraryIcon fontSize="large" className="text-blue-600 dark:text-blue-400" />,
       path: '/lecturer/courses',
       action: 'Manage Courses'
     },
@@ -152,6 +153,14 @@ const navigationConfig: RoleNavConfig = {
       icon: <PeopleAltIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
       path: '/lecturer/students',
       action: 'View Students'
+    },
+    {
+      id: 'esoft',
+      title: 'Esoft',
+      description: 'View and manage your Esoft students',
+      icon: <PeopleAltIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
+      path: '/lecturer/students/esoft',
+      action: 'View Esoft Students'
     }
   ],
   
