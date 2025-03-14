@@ -55,3 +55,5 @@ const testSubmitPost = async (e: React.FormEvent) => {
 
 
 export default Test;
+
+//check fixes commit #7
