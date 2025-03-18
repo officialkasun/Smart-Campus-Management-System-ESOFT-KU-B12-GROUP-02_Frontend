@@ -96,6 +96,11 @@ const Users = () => {
     role?: string;
   }>({});
 
+  // New state variables for delete user
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -140,6 +145,48 @@ const Users = () => {
   const handleDeleteUser = (user: User) => {
     setSelectedUser(user);
     setDeleteDialogOpen(true);
+    // Reset delete states
+    setDeleteError(null);
+    setDeleteSuccess(null);
+  };
+
+  // Confirm and execute delete user
+  const confirmDeleteUser = async () => {
+    if (!selectedUser) return;
+    
+    setDeleteLoading(true);
+    setDeleteError(null);
+    setDeleteSuccess(null);
+    
+    try {
+      await axios.delete(
+        `${config.apiUrl}/api/users/${selectedUser._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      setDeleteSuccess(`User "${selectedUser.name}" was deleted successfully.`);
+      
+      // Refresh users list
+      fetchUsers();
+      
+      // Close dialog after success with short delay
+      setTimeout(() => {
+        setDeleteDialogOpen(false);
+        setDeleteError(null);
+        setDeleteSuccess(null);
+        setSelectedUser(null);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Error deleting user:', err);
+      setDeleteError(err.response?.data?.message || 'Failed to delete user. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const getRoleColor = (role: string) => {
@@ -592,13 +639,21 @@ const Users = () => {
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
+        onClose={() => !deleteLoading && setDeleteDialogOpen(false)}
         aria-labelledby="delete-dialog-title"
       >
         <DialogTitle id="delete-dialog-title">
           <span className='font-semibold text-red-600'>Confirm Deletion</span>
         </DialogTitle>
         <DialogContent>
+          {deleteError && (
+            <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>
+          )}
+          
+          {deleteSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>{deleteSuccess}</Alert>
+          )}
+          
           <DialogContentText>
             <span className='text-black dark:text-white'>
               Are you sure you want to delete user "{selectedUser?.name}"? This action cannot be undone.
@@ -606,16 +661,26 @@ const Users = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            color="primary"
+            disabled={deleteLoading}
+          >
             Cancel
           </Button>
           <button 
-            onClick={() => setDeleteDialogOpen(false)} 
-            className="btn bg-red-500 p-3 rounded-3xl shadow-lg hover:bg-red-600 hover:scale-105 cursor-pointer text-white"
+            onClick={confirmDeleteUser} 
+            className="btn bg-red-500 p-3 rounded-3xl shadow-lg hover:bg-red-600 hover:scale-105 cursor-pointer text-white disabled:opacity-50 disabled:hover:bg-red-500 disabled:hover:scale-100"
+            disabled={deleteLoading || !!deleteSuccess}
           >
-            Delete
+            {deleteLoading ? 'Deleting...' : 'Delete'}
           </button>
         </DialogActions>
+        {deleteLoading && (
+          <Box sx={{ width: '100%', mt: 0 }}>
+            <LinearProgress color="error" />
+          </Box>
+        )}
       </Dialog>
 
       {/* Add New User Modal */}
