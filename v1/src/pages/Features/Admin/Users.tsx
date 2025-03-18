@@ -107,8 +107,8 @@ const Users = () => {
       setUsers(response.data);
       setError(null);
     } catch (err: any) {
-      console.error('Error fetching users:', err);
-      setError(err.response?.data?.message || 'Failed to fetch users');
+      console.error('Error fetching users :', err);
+      setError(err.response?.data?.message || 'Failed to collect user details.');
     } finally {
       setLoading(false);
     }
