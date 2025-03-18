@@ -6,6 +6,7 @@ import EventIcon from '@mui/icons-material/Event';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AppsIcon from '@mui/icons-material/Apps';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 
 // Student Icons
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -45,6 +46,14 @@ const navigationConfig: RoleNavConfig = {
       icon: <DashboardIcon fontSize="large" className="text-amber-600 dark:text-amber-400" />,
       path: '/admin/dashboard',
       action: 'View'
+    },
+    {
+      id: 'analytics',
+      title: 'Analytics',
+      description: 'View system analytics',
+      icon: <AnalyticsIcon fontSize="large" className="text-yellow-600 dark:text-yellow-400" />,
+      path: '/admin/analytics',
+      action: 'View Analytics'
     },
     {
       id: 'users',
@@ -167,21 +176,13 @@ const navigationConfig: RoleNavConfig = {
       action: 'Manage Events'
     },
     {
-      id: 'grading',
-      title: 'Grading',
-      description: 'Grade student submissions',
-      icon: <GradeIcon fontSize="large" className="text-green-600 dark:text-green-400" />,
-      path: '/lecturer/grading',
-      action: 'Grade'
+      id: 'resources',
+      title: 'Resource Management',
+      description: 'Create and manage resources',
+      icon: <AppsIcon fontSize="large" className="text-red-800 dark:text-red-600" />,
+      path: '/lecturer/resources',
+      action: 'Manage Resources'
     },
-    {
-      id: 'esoft',
-      title: 'Esoft',
-      description: 'View and manage your Esoft students',
-      icon: <PeopleAltIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
-      path: '/lecturer/students/esoft',
-      action: 'View Esoft Students'
-    }
   ],
   
   guest: [

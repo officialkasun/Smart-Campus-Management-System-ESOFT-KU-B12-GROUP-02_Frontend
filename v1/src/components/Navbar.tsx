@@ -1,12 +1,15 @@
 import React, { useState, useEffect, MouseEvent } from 'react';
-import { AppBar, Toolbar, Typography, Button, IconButton, Drawer, Avatar, Menu, MenuItem, ListItemIcon } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, IconButton, Drawer, Avatar, Menu, MenuItem, ListItemIcon, Badge } from '@mui/material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Box } from '@mui/system';
 import Cookies from 'js-cookie';
+import axios from 'axios';
+import config from '../config';
 import ThemeToggle from './ThemeToggle';
 import { AdminSidebar, StudentSidebar, LecturerSidebar, GuestSidebar } from './Sidebars';
 
@@ -22,6 +25,8 @@ const Navbar: React.FC = () => {
            localStorage.getItem('theme') || 
            'light';
   });
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [notificationsLoading, setNotificationsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -74,6 +79,51 @@ const Navbar: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Function to fetch unread notification count
+  const fetchUnreadNotificationCount = async () => {
+    if (!isLoggedIn) {
+      setUnreadCount(0);
+      return;
+    }
+
+    try {
+      setNotificationsLoading(true);
+      const response = await axios.get(`${config.apiUrl}/api/notifications/unread-count`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      
+      if (response.data && response.data.unreadCount !== undefined) {
+        setUnreadCount(response.data.unreadCount);
+      }
+    } catch (error) {
+      console.error('Error fetching notification count:', error);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  // Fetch notification count on component mount and when auth state changes
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchUnreadNotificationCount();
+    } else {
+      setUnreadCount(0);
+    }
+  }, [isLoggedIn]);
+
+  // Poll for notification count updates every 30 seconds
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    
+    const interval = setInterval(() => {
+      fetchUnreadNotificationCount();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [isLoggedIn]);
+
   const toggleDrawer = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
     if (event.type === 'keydown' && ((event as React.KeyboardEvent).key === 'Tab' || (event as React.KeyboardEvent).key === 'Shift')) {
       return;
@@ -106,6 +156,11 @@ const Navbar: React.FC = () => {
     navigate('/');
   };
 
+  // Function to navigate to notifications page without resetting count
+  const navigateToNotifications = () => {
+    navigate('/notifications');
+  };
+
   return (
     <>
       <AppBar position="fixed" className="bg-primary">
@@ -120,6 +175,32 @@ const Navbar: React.FC = () => {
           </Typography>
           
           <ThemeToggle currentTheme={theme} toggleTheme={toggleTheme} />
+          
+          {isLoggedIn && (
+            <IconButton 
+              color="inherit" 
+              onClick={navigateToNotifications}
+              className="mx-2"
+              aria-label="notifications"
+            >
+              <Badge 
+                badgeContent={unreadCount} 
+                color="error"
+                max={99}
+                overlap="circular"
+                sx={{
+                  '& .MuiBadge-badge': {
+                    fontSize: '0.7rem',
+                    height: '20px',
+                    minWidth: '20px',
+                    padding: '0 6px',
+                  }
+                }}
+              >
+                <NotificationsIcon className="text-white hover:text-amber-300 transition-colors" />
+              </Badge>
+            </IconButton>
+          )}
           
           {isLoggedIn ? (
             <>
@@ -142,7 +223,7 @@ const Navbar: React.FC = () => {
               >
                 <MenuItem component={Link} to="/account" onClick={handleMenuClose} className="hover:bg-base-200">
                   <ListItemIcon className='text-red-500'>
-                    <span className='text-blue-600'><AccountCircleIcon fontSize="small" className="text-c" /></span>
+                    <span className='text-blue-600'><AccountCircleIcon fontSize="small" /></span>
                   </ListItemIcon>
                   <span className="text-blue-600">My Account</span>
                 </MenuItem>

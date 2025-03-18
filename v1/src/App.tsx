@@ -15,10 +15,13 @@ import Users from './pages/Features/Admin/Users';
 import Courses from './pages/Features/Admin/Courses';
 import { default as CoursesLecture } from './pages/Features/Lecturer/Courses';
 import { default as EventsLecturer } from './pages/Features/Lecturer/Events';
+import { default as ResourcesLecturer } from './pages/Features/Lecturer/Resources';
 import Events from './pages/Features/Admin/Events';
 import Resources from './pages/Features/Admin/Resources';
 import Students from './pages/Features/Lecturer/Students';
 import Schedules from './pages/Features/Admin/Schedules';
+import Analytics from './pages/Features/Admin/Analytics';
+import Notifications from './pages/MyAccount/Notifications';
 
 function App() {
   return (
@@ -38,6 +41,7 @@ function App() {
           <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
           <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
           <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
+          <Route path="/admin/analytics" element={<ProtectedRoute element={<Analytics />} allowedRole="admin" />}  />
           //close Kasuns Part
 
 
@@ -47,10 +51,12 @@ function App() {
           <Route path="/lecturer/courses" element={<ProtectedRoute element={<CoursesLecture />} allowedRole="lecturer" />} />
           <Route path="/lecturer/students" element={<ProtectedRoute element={<Students />} allowedRole="lecturer" />} />
           <Route path="/lecturer/events" element={<ProtectedRoute element={<EventsLecturer />} allowedRole="lecturer" />} />
+          <Route path="/lecturer/resources" element={<ProtectedRoute element={<ResourcesLecturer />} allowedRole="lecturer" />} />
           //close Dilhans Part
 
           <Route path="/student/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="student" />} />
           <Route path="/account"  element={<ProtectedRoute element={<ManageMe />} allowedRole="" />}/>
+          <Route path="/notifications"  element={<ProtectedRoute element={<Notifications />} allowedRole="" />}/>
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
