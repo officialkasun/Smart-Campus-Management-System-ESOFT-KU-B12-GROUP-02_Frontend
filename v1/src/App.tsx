@@ -12,6 +12,7 @@ import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import ManageMe from './pages/MyAccount/ManageMe';
+import Users from './pages/Features/Admin/Users';
 
 function App() {
   return (
@@ -24,6 +25,12 @@ function App() {
           <Route path="/" element={<Home />} />
       
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="admin" />} />
+
+          //Kasuns Part
+          <Route path="/admin/users" element={<Users />} />
+          //close Kasuns Part
+
+
           <Route path="/lecturer/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="lecturer" />} />
 
           //Dilhans Part
