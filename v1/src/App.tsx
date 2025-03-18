@@ -27,7 +27,7 @@ function App() {
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="admin" />} />
 
           //Kasuns Part
-          <Route path="/admin/users" element={<Users />} />
+          <Route path="/admin/users" element={<ProtectedRoute element={<Users />} allowedRole="admin" />}  />
           //close Kasuns Part
 
 
