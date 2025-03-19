@@ -68,7 +68,11 @@ interface Event {
     name: string;
     email: string;
   };
-  attendees: string[];
+  attendees: {
+    _id: string;
+    name: string;
+    email: string;
+  }[];
   attendeesCount: number;
   createdAt: string;
 }
@@ -183,7 +187,7 @@ const Events = () => {
     }
     
     try {
-      const response = await axios.get(`${config.apiUrl}/api/events`, {
+      const response = await axios.get(`${config.apiUrl}/api/events/with-attendance`, {
         headers: {
           Authorization: `Bearer ${Cookies.get('token')}`,
         },
@@ -1022,6 +1026,52 @@ const Events = () => {
                       <Typography variant="body1">
                         {selectedEvent.attendeesCount} {selectedEvent.attendeesCount === 1 ? 'person' : 'people'} attending
                       </Typography>
+                      
+                      {/* Show detailed attendee information */}
+                      {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (
+                        <Box mt={1}>
+                          <Typography variant="body2" color="text.secondary" mb={1}>
+                            Attendees:
+                          </Typography>
+                          <Paper variant="outlined" sx={{ p: 1, maxHeight: '150px', overflow: 'auto' }}>
+                            {selectedEvent.attendees.map((attendee, index) => (
+                              <Box 
+                                key={attendee._id}
+                                display="flex" 
+                                alignItems="center"
+                                py={0.5}
+                                px={1}
+                                sx={{
+                                  '&:not(:last-child)': {
+                                    borderBottom: '1px solid',
+                                    borderColor: 'divider'
+                                  }
+                                }}
+                              >
+                                <Avatar
+                                  sx={{ 
+                                    width: 24, 
+                                    height: 24, 
+                                    mr: 1, 
+                                    bgcolor: 'primary.main',
+                                    fontSize: '0.8rem' 
+                                  }}
+                                >
+                                  {attendee.name.charAt(0)}
+                                </Avatar>
+                                <Box>
+                                  <Typography variant="body2">
+                                    {attendee.name}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {attendee.email}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            ))}
+                          </Paper>
+                        </Box>
+                      )}
                     </div>
                   </div>
 
