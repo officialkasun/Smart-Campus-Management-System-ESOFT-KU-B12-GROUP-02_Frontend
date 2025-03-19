@@ -145,6 +145,58 @@ const Courses = () => {
     setViewModalOpen(true);
   };
 
+  // Helper function to check if a course is currently in session
+  const isCurrentlyInSession = (course: Course): boolean => {
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const today = daysOfWeek[new Date().getDay()];
+    
+    // Check if the course is scheduled for today
+    if (course.schedule.day !== today) {
+      return false;
+    }
+    
+    // Get current time in 24-hour format (HH:MM)
+    const now = new Date();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTimeStr = `${currentHours.toString().padStart(2, '0')}:${currentMinutes.toString().padStart(2, '0')}`;
+    
+    // Parse start and end times to 24-hour format for comparison
+    const parseTimeToMinutes = (timeStr: string): number => {
+      // Handle different time formats (10:00 AM, 10:00, etc.)
+      let hours = 0;
+      let minutes = 0;
+      
+      if (timeStr.includes(':')) {
+        const timeParts = timeStr.split(':');
+        hours = parseInt(timeParts[0], 10);
+        
+        // Extract minutes, removing any AM/PM
+        const minutesPart = timeParts[1].replace(/\s*[AP]M\s*$/, '');
+        minutes = parseInt(minutesPart, 10);
+        
+        // Convert 12-hour format to 24-hour if needed
+        if (timeStr.toUpperCase().includes('PM') && hours < 12) {
+          hours += 12;
+        }
+        if (timeStr.toUpperCase().includes('AM') && hours === 12) {
+          hours = 0;
+        }
+      } else {
+        // If there's no colon, assume it's just hours
+        hours = parseInt(timeStr, 10);
+      }
+      
+      return hours * 60 + minutes;
+    };
+    
+    const currentTime = currentHours * 60 + currentMinutes;
+    const startTime = parseTimeToMinutes(course.schedule.startTime);
+    const endTime = parseTimeToMinutes(course.schedule.endTime);
+    
+    return currentTime >= startTime && currentTime <= endTime;
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -232,29 +284,42 @@ const Courses = () => {
               <TableBody>
                 {sortedCourses
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((course) => (
-                    <TableRow key={course._id} hover>
-                      <TableCell><span className='dark:text-white text-black'>{course.name}</span></TableCell>
-                      <TableCell><span className='dark:text-white text-black'>{course.code}</span></TableCell>
-                      <TableCell><span className='dark:text-white text-black'>{course.instructor.name}</span></TableCell>
-                      <TableCell>
-                        <Chip
-                          label={`${course.schedule.day}, ${course.schedule.startTime} - ${course.schedule.endTime}`}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell><span className='dark:text-white text-black'>{new Date(course.createdAt).toLocaleDateString()}</span></TableCell>
-                      <TableCell>
-                        <IconButton 
-                          size="small" 
-                          color="primary"
-                          onClick={() => handleViewCourse(course)}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  .map((course) => {
+                    const inSession = isCurrentlyInSession(course);
+                    return (
+                      <TableRow 
+                        key={course._id} 
+                        hover
+                        sx={{
+                          backgroundColor: inSession ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 152, 0, 0.1)',
+                          '&:hover': {
+                            backgroundColor: inSession ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 152, 0, 0.2)',
+                          }
+                        }}
+                      >
+                        <TableCell><span className='dark:text-white text-black'>{course.name}</span></TableCell>
+                        <TableCell><span className='dark:text-white text-black'>{course.code}</span></TableCell>
+                        <TableCell><span className='dark:text-white text-black'>{course.instructor.name}</span></TableCell>
+                        <TableCell>
+                          <Chip
+                            label={`${course.schedule.day}, ${course.schedule.startTime} - ${course.schedule.endTime}`}
+                            size="small"
+                            color={inSession ? "success" : "warning"}
+                          />
+                        </TableCell>
+                        <TableCell><span className='dark:text-white text-black'>{new Date(course.createdAt).toLocaleDateString()}</span></TableCell>
+                        <TableCell>
+                          <IconButton 
+                            size="small" 
+                            color="primary"
+                            onClick={() => handleViewCourse(course)}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 {courses.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} align="center" className="py-8">
