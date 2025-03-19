@@ -62,6 +62,7 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
   PersonAdd as PersonAddIcon,
+  PersonRemove as PersonRemoveIcon,
 } from '@mui/icons-material';
 
 // Define Event interface
@@ -205,6 +206,19 @@ const Events = () => {
   const [attendeesError, setAttendeesError] = useState<string | null>(null);
   const [attendeesSuccess, setAttendeesSuccess] = useState<boolean>(false);
   const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
+
+  // State for unassigning attendees
+  const [unassignLoading, setUnassignLoading] = useState<string | null>(null);
+  const [unassignError, setUnassignError] = useState<string | null>(null);
+  const [unassignSuccess, setUnassignSuccess] = useState<boolean>(false);
+  
+  // State for attendee removal confirmation modal
+  const [attendeeRemoveModalOpen, setAttendeeRemoveModalOpen] = useState<boolean>(false);
+  const [attendeeToRemove, setAttendeeToRemove] = useState<{ 
+    eventId: string, 
+    attendeeId: string, 
+    attendeeName: string 
+  } | null>(null);
 
   // Fetch events function
   const fetchEvents = async (showRefreshAnimation = false) => {
@@ -835,6 +849,62 @@ const Events = () => {
     setStudentSearchQuery('');
   };
 
+  // Function to open the attendee removal confirmation modal
+  const handleOpenRemoveAttendeeModal = (eventId: string, attendeeId: string, attendeeName: string) => {
+    setAttendeeToRemove({ eventId, attendeeId, attendeeName });
+    setAttendeeRemoveModalOpen(true);
+    setUnassignError(null);
+    setUnassignSuccess(false);
+  };
+
+  // Function to handle unassigning a single attendee
+  const handleUnassignAttendee = async () => {
+    if (!attendeeToRemove) return;
+    
+    const { eventId, attendeeId } = attendeeToRemove;
+    setUnassignLoading(attendeeId);
+    
+    try {
+      await axios.delete(`${config.apiUrl}/api/events/${eventId}/${attendeeId}`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`
+        }
+      });
+      
+      setUnassignSuccess(true);
+      
+      // Refresh events list to get updated attendees
+      fetchEvents();
+      
+      // Also update the currently viewed event
+      if (selectedEvent && selectedEvent._id === eventId) {
+        setSelectedEvent({
+          ...selectedEvent,
+          attendees: selectedEvent.attendees.filter(a => a._id !== attendeeId),
+          attendeesCount: selectedEvent.attendeesCount - 1
+        });
+      }
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setAttendeeRemoveModalOpen(false);
+        setAttendeeToRemove(null);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Error removing attendee:', err);
+      setUnassignError(err.response?.data?.message || 'Failed to remove attendee. Please try again.');
+    } finally {
+      setUnassignLoading(null);
+    }
+  };
+
+  // Function to check if a student is already assigned to the event
+  const isStudentAssigned = (studentId: string): boolean => {
+    if (!selectedEvent) return false;
+    return selectedEvent.attendees.some(attendee => attendee._id === studentId);
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -1151,11 +1221,11 @@ const Events = () => {
                   
                   <div className="flex items-start">
                     <GroupIcon className="text-blue-600 mr-3 mt-1" />
-                    <div>
+                    <div className="w-full">
                       <Typography variant="body2" color="primary">
                         Attendance
                       </Typography>
-                      <Box display="flex" alignItems="center" gap={2}>
+                      <Box display="flex" alignItems="center" gap={2} mb={1}>
                         <Typography variant="body1">
                           {selectedEvent.attendeesCount} {selectedEvent.attendeesCount === 1 ? 'person' : 'people'} attending
                         </Typography>
@@ -1169,20 +1239,40 @@ const Events = () => {
                         </Button>
                       </Box>
                       
-                      {/* Show detailed attendee information */}
-                      {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (
-                        <Box mt={1}>
-                          <Typography variant="body2" color="text.secondary" mb={1}>
-                            Attendees:
-                          </Typography>
-                          <Paper variant="outlined" sx={{ p: 1, maxHeight: '150px', overflow: 'auto' }}>
-                            {selectedEvent.attendees.map((attendee, index) => (
-                              <Box 
+                      {unassignError && (
+                        <Alert severity="error" sx={{ mb: 2, mt: 1 }} onClose={() => setUnassignError(null)}>
+                          {unassignError}
+                        </Alert>
+                      )}
+                      
+                      {unassignSuccess && (
+                        <Alert severity="success" sx={{ mb: 2, mt: 1 }} onClose={() => setUnassignSuccess(false)}>
+                          Attendee removed successfully!
+                        </Alert>
+                      )}
+                      
+                      {/* Show detailed attendee information with remove option */}
+                      {selectedEvent.attendees && selectedEvent.attendees.length > 0 ? (
+                        <Paper variant="outlined" sx={{ p: 1, maxHeight: '200px', overflow: 'auto', mt: 1 }}>
+                          <List dense disablePadding>
+                            {selectedEvent.attendees.map((attendee) => (
+                              <ListItem
                                 key={attendee._id}
-                                display="flex" 
-                                alignItems="center"
-                                py={0.5}
-                                px={1}
+                                secondaryAction={
+                                  unassignLoading === attendee._id ? (
+                                    <CircularProgress size={20} />
+                                  ) : (
+                                    <IconButton 
+                                      edge="end" 
+                                      aria-label="delete" 
+                                      size="small"
+                                      color="error"
+                                      onClick={() => handleOpenRemoveAttendeeModal(selectedEvent._id, attendee._id, attendee.name)}
+                                    >
+                                      <PersonRemoveIcon fontSize="small" />
+                                    </IconButton>
+                                  )
+                                }
                                 sx={{
                                   '&:not(:last-child)': {
                                     borderBottom: '1px solid',
@@ -1190,29 +1280,25 @@ const Events = () => {
                                   }
                                 }}
                               >
-                                <Avatar
-                                  sx={{ 
-                                    width: 24, 
-                                    height: 24, 
-                                    mr: 1, 
-                                    bgcolor: 'primary.main',
-                                    fontSize: '0.8rem' 
-                                  }}
-                                >
-                                  {attendee.name.charAt(0)}
-                                </Avatar>
-                                <Box>
-                                  <Typography variant="body2">
-                                    {attendee.name}
-                                  </Typography>
-                                  <Typography variant="caption" color="text.secondary">
-                                    {attendee.email}
-                                  </Typography>
-                                </Box>
-                              </Box>
+                                <ListItemAvatar>
+                                  <Avatar sx={{ width: 28, height: 28, fontSize: '0.8rem' }}>
+                                    {attendee.name.charAt(0)}
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={attendee.name}
+                                  secondary={attendee.email}
+                                  primaryTypographyProps={{ variant: 'body2' }}
+                                  secondaryTypographyProps={{ variant: 'caption' }}
+                                />
+                              </ListItem>
                             ))}
-                          </Paper>
-                        </Box>
+                          </List>
+                        </Paper>
+                      ) : (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
+                          No attendees yet. Use the "Manage" button to add students.
+                        </Typography>
                       )}
                     </div>
                   </div>
@@ -1692,15 +1778,28 @@ const Events = () => {
                 </Box>
               ) : (
                 <>
-                  <Typography variant="body2" color="text.secondary" mb={1}>
-                    Selected: {selectedStudents.length} students
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Selected: {selectedStudents.length} students
+                    </Typography>
+                    
+                    {selectedEvent && selectedEvent.attendeesCount > 0 && (
+                      <Chip 
+                        label={`${selectedEvent.attendeesCount} current attendees`} 
+                        size="small" 
+                        color="primary" 
+                        icon={<GroupIcon />}
+                      />
+                    )}
+                  </Box>
                   
                   <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto', mb: 2 }}>
                     <List dense>
                       {filteredStudents.length > 0 ? (
                         filteredStudents.map((student) => {
                           const isSelected = selectedStudents.includes(student._id);
+                          const alreadyAssigned = isStudentAssigned(student._id);
+                          
                           return (
                             <ListItem 
                               key={student._id} 
@@ -1713,6 +1812,9 @@ const Events = () => {
                                   disabled={attendeesLoading}
                                 />
                               }
+                              sx={{
+                                bgcolor: alreadyAssigned ? 'rgba(25, 118, 210, 0.08)' : 'transparent',
+                              }}
                             >
                               <ListItemButton onClick={() => handleToggleStudent(student._id)} disabled={attendeesLoading}>
                                 <ListItemAvatar>
@@ -1721,7 +1823,19 @@ const Events = () => {
                                   </Avatar>
                                 </ListItemAvatar>
                                 <ListItemText 
-                                  primary={student.name} 
+                                  primary={
+                                    <Box component="span" sx={{ display: 'flex', alignItems: 'center' }}>
+                                      {student.name}
+                                      {alreadyAssigned && (
+                                        <Chip 
+                                          label="Attending" 
+                                          size="small" 
+                                          color="primary" 
+                                          sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+                                        />
+                                      )}
+                                    </Box>
+                                  } 
                                   secondary={student.email} 
                                 />
                               </ListItemButton>
@@ -1765,6 +1879,62 @@ const Events = () => {
                   {attendeesLoading ? 'Updating...' : 'Save Changes'}
                 </Button>
               </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+
+      {/* Attendee Remove Confirmation Modal */}
+      <Modal
+        open={attendeeRemoveModalOpen}
+        onClose={() => !unassignLoading && setAttendeeRemoveModalOpen(false)}
+        aria-labelledby="remove-attendee-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 2 }} color="error">
+                Remove Attendee
+              </Typography>
+              
+              {unassignError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{unassignError}</Alert>
+              )}
+              
+
+              
+              {unassignSuccess ? (
+                <Alert severity="success" sx={{ mb: 2 }}>Attendee removed successfully!</Alert>
+              ) : (
+                <>
+                  <Typography variant="body1" sx={{ mb: 3 }}>
+                    Are you sure you want to remove <strong>{attendeeToRemove?.attendeeName}</strong> from this event?
+                    This action cannot be undone.
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+                    <Button 
+                      onClick={() => setAttendeeRemoveModalOpen(false)} 
+                      variant="outlined"
+                      disabled={unassignLoading !== null}
+                    >
+                      Cancel
+                    </Button>
+                    <button 
+                      onClick={handleUnassignAttendee}
+                      disabled={unassignLoading !== null}
+                      className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {unassignLoading ? (
+                        <CircularProgress size={20} color="inherit" />
+                      ) : (
+                        <PersonRemoveIcon fontSize="small" />
+                      )}
+                      <span>{unassignLoading ? 'Removing...' : 'Remove Attendee'}</span>
+                    </button>
+                  </Box>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
