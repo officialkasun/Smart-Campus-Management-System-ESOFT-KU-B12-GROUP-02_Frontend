@@ -14,6 +14,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ManageMe from './pages/MyAccount/ManageMe';
 import Users from './pages/Features/Admin/Users';
 import Courses from './pages/Features/Admin/Courses';
+import { default as CoursesLecture } from './pages/Features/Lecturer/Courses';
 import Events from './pages/Features/Admin/Events';
 
 function App() {
@@ -38,7 +39,7 @@ function App() {
           <Route path="/lecturer/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="lecturer" />} />
 
           //Dilhans Part
-          <Route path="/lecturer/courses" element={<Test />} />
+          <Route path="/lecturer/courses" element={<ProtectedRoute element={<CoursesLecture />} allowedRole="lecturer" />} />
           //close Dilhans Part
 
           <Route path="/student/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="student" />} />
