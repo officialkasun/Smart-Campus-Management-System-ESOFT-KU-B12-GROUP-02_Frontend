@@ -37,7 +37,8 @@ import {
   Select,
   LinearProgress,
   InputAdornment,
-  Tooltip
+  Tooltip,
+  TableSortLabel
 } from '@mui/material';
 import { 
   Visibility as VisibilityIcon,
@@ -78,6 +79,12 @@ interface EditUserData {
   role: string;
 }
 
+// Define sorting order type
+type Order = 'asc' | 'desc';
+
+// Define sortable fields
+type SortField = 'id' | 'name' | 'email' | 'role' | 'createdAt' | null;
+
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -88,6 +95,10 @@ const Users = () => {
   const [viewModalOpen, setViewModalOpen] = useState<boolean>(false);
   const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  
+  // New state for sorting
+  const [sortOrder, setSortOrder] = useState<Order>('asc');
+  const [sortField, setSortField] = useState<SortField>(null);
   
   // New state variables for adding users
   const [addModalOpen, setAddModalOpen] = useState<boolean>(false);
@@ -187,6 +198,35 @@ const Users = () => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
+
+  // Sort handlers
+  const handleRequestSort = (field: SortField) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
+  };
+
+  // Function to compare values for sorting
+  const compareValues = (a: any, b: any, orderBy: SortField) => {
+    if (!orderBy) return 0;
+    
+    if (b[orderBy] < a[orderBy]) {
+      return sortOrder === 'asc' ? 1 : -1;
+    }
+    if (b[orderBy] > a[orderBy]) {
+      return sortOrder === 'asc' ? -1 : 1;
+    }
+    return 0;
+  };
+
+  // Sort the users based on current sort field and direction
+  const sortedUsers = React.useMemo(() => {
+    if (!sortField) return users;
+
+    return [...users].sort((a, b) => {
+      return -compareValues(a, b, sortField);
+    });
+  }, [users, sortField, sortOrder]);
 
   const handleViewUser = (user: User) => {
     setSelectedUser(user);
@@ -675,16 +715,56 @@ const Users = () => {
             <Table>
               <TableHead className="bg-gray-100">
                 <TableRow>
-                  <TableCell className="font-medium">User ID</TableCell>
-                  <TableCell className="font-medium">Name</TableCell>
-                  <TableCell className="font-medium">Email</TableCell>
-                  <TableCell className="font-medium">Role</TableCell>
-                  <TableCell className="font-medium">Created At</TableCell>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'id'}
+                      direction={sortField === 'id' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('id')}
+                    >
+                      User ID
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'name'}
+                      direction={sortField === 'name' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('name')}
+                    >
+                      Name
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'email'}
+                      direction={sortField === 'email' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('email')}
+                    >
+                      Email
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'role'}
+                      direction={sortField === 'role' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('role')}
+                    >
+                      Role
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'createdAt'}
+                      direction={sortField === 'createdAt' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('createdAt')}
+                    >
+                      Created At
+                    </TableSortLabel>
+                  </TableCell>
                   <TableCell className="font-medium">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {users
+                {sortedUsers
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((user) => (
                     <TableRow key={user._id} hover>
