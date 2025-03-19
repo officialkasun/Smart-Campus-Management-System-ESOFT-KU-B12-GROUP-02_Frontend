@@ -148,6 +148,9 @@ const Users = () => {
     role?: string;
   }>({});
 
+  // New state for search type (ID or name)
+  const [searchType, setSearchType] = useState<'id' | 'name'>('id');
+
   const fetchUsers = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
       setRefreshing(true);
@@ -560,10 +563,52 @@ const Users = () => {
     }
   };
 
-  // Handle search form submit
+  // Search user by name
+  const searchUserByName = async () => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, reset to show all users
+      setSearchPerformed(false);
+      fetchUsers();
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+
+    try {
+      const response = await axios.get(
+        `${config.apiUrl}/api/users/name/${searchQuery.trim()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      if (response.data && response.data.length > 0) {
+        setUsers(response.data);
+      } else {
+        setUsers([]);
+        setSearchError('No users found with the provided name');
+      }
+    } catch (err: any) {
+      console.error('Error searching user by name:', err);
+      setSearchError('Failed to search for users by name');
+      setUsers([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Handle search form submit - now handles both ID and name search
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    searchUserById();
+    if (searchType === 'id') {
+      searchUserById();
+    } else {
+      searchUserByName();
+    }
   };
 
   // Handle search input change
@@ -573,6 +618,14 @@ const Users = () => {
     if (searchError) {
       setSearchError(null);
     }
+  };
+
+  // Handle search type change
+  const handleSearchTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchType(e.target.value as 'id' | 'name');
+    // Clear search query and errors when changing search type
+    setSearchQuery('');
+    setSearchError(null);
   };
 
   // Clear search and show all users again
@@ -618,10 +671,49 @@ const Users = () => {
       <Paper className="shadow-lg mb-4">
         <Box p={2}>
           <form onSubmit={handleSearchSubmit}>
+            <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={2} mb={2}>
+              {/* Search type radio buttons */}
+              <FormControl component="fieldset">
+                <Box display="flex" flexDirection="row">
+                  <FormControl component="fieldset">
+                    <Box display="flex" alignItems="center">
+                      <Typography variant="body2" mr={1}>Search by:</Typography>
+                      <Box display="flex" flexDirection="row">
+                        <Box display="flex" alignItems="center" mr={2}>
+                          <input
+                            type="radio"
+                            id="search-id"
+                            name="search-type"
+                            value="id"
+                            checked={searchType === 'id'}
+                            onChange={handleSearchTypeChange}
+                            className="mr-1"
+                          />
+                          <label htmlFor="search-id">ID</label>
+                        </Box>
+                        <Box display="flex" alignItems="center">
+                          <input
+                            type="radio"
+                            id="search-name"
+                            name="search-type"
+                            value="name"
+                            checked={searchType === 'name'}
+                            onChange={handleSearchTypeChange}
+                            className="mr-1"
+                          />
+                          <label htmlFor="search-name">Name</label>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </FormControl>
+                </Box>
+              </FormControl>
+            </Box>
+            
             <TextField
               fullWidth
               variant="outlined"
-              placeholder="Search user by ID..."
+              placeholder={searchType === 'id' ? "Search user by ID..." : "Search user by name..."}
               value={searchQuery}
               onChange={handleSearchChange}
               InputProps={{
@@ -651,7 +743,7 @@ const Users = () => {
               )}
               {searchPerformed && !searchError && users.length > 0 && (
                 <Typography variant="body2" color="primary">
-                  User found
+                  {users.length} user{users.length !== 1 ? 's' : ''} found
                 </Typography>
               )}
               <Button
@@ -677,7 +769,7 @@ const Users = () => {
             </Typography>
             {!searchPerformed && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                Last updated: {formatRefreshTime(lastRefreshTime)}
+               <span className='dark:text-gray-400 text-gray-700'> Last updated: {formatRefreshTime(lastRefreshTime)}</span>
               </Typography>
             )}
           </Box>
@@ -768,9 +860,9 @@ const Users = () => {
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((user) => (
                     <TableRow key={user._id} hover>
-                      <TableCell>{user.id}</TableCell>
-                      <TableCell>{user.name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
+                      <TableCell ><span className='dark:text-white text-black' >{user.id}</span></TableCell>
+                      <TableCell><span className='dark:text-white text-black' >{user.name}</span></TableCell>
+                      <TableCell><span className='dark:text-white text-black' >{user.email}</span></TableCell>
                       <TableCell>
                         <Chip 
                           label={user.role} 
@@ -778,8 +870,8 @@ const Users = () => {
                           size="small"
                         />
                       </TableCell>
-                      <TableCell>
-                        {new Date(user.createdAt).toLocaleDateString()}
+                      <TableCell><span className='dark:text-white text-black' >
+                        {new Date(user.createdAt).toLocaleDateString()}</span>
                       </TableCell>
                       <TableCell>
                         <Box display="flex" gap={1}>
@@ -869,7 +961,7 @@ const Users = () => {
                   <div className="flex items-center">
                     <BadgeIcon className="text-blue-600 mr-3" />
                     <div>
-                      <Typography variant="body2" color="textSecondary">
+                      <Typography variant="body2" color="primary">
                         User ID
                       </Typography>
                       <Typography variant="body1">
@@ -881,7 +973,7 @@ const Users = () => {
                   <div className="flex items-center">
                     <EmailIcon className="text-blue-600 mr-3" />
                     <div>
-                      <Typography variant="body2" color="textSecondary">
+                      <Typography variant="body2" color="primary">
                         Email
                       </Typography>
                       <Typography variant="body1">
@@ -894,7 +986,7 @@ const Users = () => {
                     <div className="flex items-center">
                       <SchoolIcon className="text-blue-600 mr-3" />
                       <div>
-                        <Typography variant="body2" color="textSecondary">
+                        <Typography variant="body2" color="primary">
                           Enrolled Courses
                         </Typography>
                         <Typography variant="body1">
@@ -907,7 +999,7 @@ const Users = () => {
                   <div className="flex items-center">
                     <AccessTimeIcon className="text-blue-600 mr-3" />
                     <div>
-                      <Typography variant="body2" color="textSecondary">
+                      <Typography variant="body2" color="primary">
                         Account Created
                       </Typography>
                       <Typography variant="body1">
