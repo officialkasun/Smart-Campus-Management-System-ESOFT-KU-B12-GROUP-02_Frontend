@@ -271,6 +271,12 @@ const Courses = () => {
     });
   }, [courses, sortField, sortOrder]);
 
+  // Function to handle viewing a course
+  const handleViewCourse = (course: Course) => {
+    setSelectedCourse(course);
+    setViewModalOpen(true);
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -483,7 +489,11 @@ const Courses = () => {
                       </TableCell>
                       <TableCell><span className='dark:text-white text-black'>{new Date(course.createdAt).toLocaleDateString()}</span></TableCell>
                       <TableCell>
-                        <IconButton size="small" color="primary">
+                        <IconButton 
+                          size="small" 
+                          color="primary"
+                          onClick={() => handleViewCourse(course)}
+                        >
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
