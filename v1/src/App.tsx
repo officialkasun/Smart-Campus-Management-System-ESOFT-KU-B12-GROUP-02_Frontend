@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import ManageMe from './pages/MyAccount/ManageMe';
 import Users from './pages/Features/Admin/Users';
+import Courses from './pages/Features/Admin/Courses';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
 
           //Kasuns Part
           <Route path="/admin/users" element={<ProtectedRoute element={<Users />} allowedRole="admin" />}  />
+          <Route path="/admin/courses" element={<ProtectedRoute element={<Courses />} allowedRole="admin" />}  />
           //close Kasuns Part
 
 
