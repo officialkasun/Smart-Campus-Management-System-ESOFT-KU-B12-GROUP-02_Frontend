@@ -35,6 +35,13 @@ import {
   Alert,
   LinearProgress,
   SelectChangeEvent,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemButton,
+  ListItemText,
+  Checkbox,
+  ListItemIcon,
 } from '@mui/material';
 import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -54,6 +61,7 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 
 // Define Event interface
@@ -93,6 +101,13 @@ interface EditEvent {
   date: string;
   location: string;
   organizer: string;
+}
+
+// Define Student interface
+interface Student {
+  _id: string;
+  name: string;
+  email: string;
 }
 
 // Define sorting order type
@@ -177,6 +192,19 @@ const Events = () => {
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<boolean>(false);
+
+  // State for students data
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loadingStudents, setLoadingStudents] = useState<boolean>(false);
+  const [studentError, setStudentError] = useState<string | null>(null);
+  
+  // State for managing attendees modal
+  const [attendeesModalOpen, setAttendeesModalOpen] = useState<boolean>(false);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [attendeesLoading, setAttendeesLoading] = useState<boolean>(false);
+  const [attendeesError, setAttendeesError] = useState<string | null>(null);
+  const [attendeesSuccess, setAttendeesSuccess] = useState<boolean>(false);
+  const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
 
   // Fetch events function
   const fetchEvents = async (showRefreshAnimation = false) => {
@@ -703,6 +731,110 @@ const Events = () => {
     }
   };
 
+  // Fetch students function
+  const fetchStudents = async () => {
+    setLoadingStudents(true);
+    setStudentError(null);
+    
+    try {
+      const response = await axios.get(`${config.apiUrl}/api/users/student`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      setStudents(response.data);
+    } catch (err: any) {
+      console.error('Error fetching students:', err);
+      setStudentError(err.response?.data?.message || 'Failed to fetch students.');
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  // Handle opening the attendees management modal
+  const handleManageAttendees = (event: Event) => {
+    setSelectedEvent(event);
+    setAttendeesModalOpen(true);
+    setAttendeesError(null);
+    setAttendeesSuccess(false);
+    
+    // Pre-select current attendees
+    const currentAttendeeIds = event.attendees.map(attendee => attendee._id);
+    setSelectedStudents(currentAttendeeIds);
+    
+    // Fetch students for the modal
+    fetchStudents();
+  };
+
+  // Handle toggling a student selection
+  const handleToggleStudent = (studentId: string) => {
+    setSelectedStudents(prev => {
+      if (prev.includes(studentId)) {
+        return prev.filter(id => id !== studentId);
+      } else {
+        return [...prev, studentId];
+      }
+    });
+  };
+
+  // Filter students based on search query
+  const filteredStudents = React.useMemo(() => {
+    if (!studentSearchQuery) return students;
+
+    const query = studentSearchQuery.toLowerCase();
+    return students.filter(student => 
+      student.name.toLowerCase().includes(query) ||
+      student.email.toLowerCase().includes(query)
+    );
+  }, [students, studentSearchQuery]);
+
+  // Update event attendees
+  const handleUpdateAttendees = async () => {
+    if (!selectedEvent) return;
+    
+    setAttendeesLoading(true);
+    setAttendeesError(null);
+    
+    try {
+      await axios.post(
+        `${config.apiUrl}/api/events/${selectedEvent._id}/bulk`,
+        { studentIds: selectedStudents },
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      setAttendeesSuccess(true);
+      
+      // Refresh events list to get updated attendees
+      fetchEvents();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setAttendeesModalOpen(false);
+        setAttendeesSuccess(false);
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Error updating attendees:', err);
+      setAttendeesError(err.response?.data?.message || 'Failed to update attendees. Please try again.');
+    } finally {
+      setAttendeesLoading(false);
+    }
+  };
+
+  // Handle student search input change
+  const handleStudentSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setStudentSearchQuery(e.target.value);
+  };
+
+  // Clear student search
+  const handleClearStudentSearch = () => {
+    setStudentSearchQuery('');
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -1023,9 +1155,19 @@ const Events = () => {
                       <Typography variant="body2" color="primary">
                         Attendance
                       </Typography>
-                      <Typography variant="body1">
-                        {selectedEvent.attendeesCount} {selectedEvent.attendeesCount === 1 ? 'person' : 'people'} attending
-                      </Typography>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Typography variant="body1">
+                          {selectedEvent.attendeesCount} {selectedEvent.attendeesCount === 1 ? 'person' : 'people'} attending
+                        </Typography>
+                        <Button
+                          size="small"
+                          color="primary"
+                          startIcon={<PersonAddIcon />}
+                          onClick={() => handleManageAttendees(selectedEvent)}
+                        >
+                          Manage
+                        </Button>
+                      </Box>
                       
                       {/* Show detailed attendee information */}
                       {selectedEvent.attendees && selectedEvent.attendees.length > 0 && (
@@ -1480,6 +1622,148 @@ const Events = () => {
                     {editLoading ? 'Updating...' : 'Update Event'}
                   </Button>
                 </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+
+      {/* Attendees Management Modal */}
+      <Modal
+        open={attendeesModalOpen}
+        onClose={() => !attendeesLoading && setAttendeesModalOpen(false)}
+        aria-labelledby="manage-attendees-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+                <span className='font-semibold text-blue-600'>Manage Attendees</span>
+                {selectedEvent && (
+                  <Typography variant="body2" color="text.secondary">
+                    Event: {selectedEvent.title}
+                  </Typography>
+                )}
+              </Typography>
+
+              {attendeesError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{attendeesError}</Alert>
+              )}
+              
+              {attendeesSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>Attendees updated successfully!</Alert>
+              )}
+
+              {studentError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{studentError}</Alert>
+              )}
+
+              {/* Search students */}
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="Search students by name or email..."
+                value={studentSearchQuery}
+                onChange={handleStudentSearchChange}
+                sx={{ mb: 2 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: studentSearchQuery && (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="clear search"
+                        onClick={handleClearStudentSearch}
+                        edge="end"
+                      >
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              {loadingStudents ? (
+                <Box display="flex" justifyContent="center" my={3}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <>
+                  <Typography variant="body2" color="text.secondary" mb={1}>
+                    Selected: {selectedStudents.length} students
+                  </Typography>
+                  
+                  <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto', mb: 2 }}>
+                    <List dense>
+                      {filteredStudents.length > 0 ? (
+                        filteredStudents.map((student) => {
+                          const isSelected = selectedStudents.includes(student._id);
+                          return (
+                            <ListItem 
+                              key={student._id} 
+                              disablePadding
+                              secondaryAction={
+                                <Checkbox
+                                  edge="end"
+                                  checked={isSelected}
+                                  onChange={() => handleToggleStudent(student._id)}
+                                  disabled={attendeesLoading}
+                                />
+                              }
+                            >
+                              <ListItemButton onClick={() => handleToggleStudent(student._id)} disabled={attendeesLoading}>
+                                <ListItemAvatar>
+                                  <Avatar>
+                                    {student.name.charAt(0)}
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText 
+                                  primary={student.name} 
+                                  secondary={student.email} 
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          );
+                        })
+                      ) : (
+                        <ListItem>
+                          <ListItemText 
+                            primary="No students found" 
+                            secondary={studentSearchQuery ? "Try a different search term" : "No students available"}
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+                  </Paper>
+                </>
+              )}
+
+              {attendeesLoading && (
+                <Box sx={{ width: '100%', mt: 2 }}>
+                  <LinearProgress />
+                </Box>
+              )}
+              
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                <Button 
+                  onClick={() => setAttendeesModalOpen(false)} 
+                  variant="outlined"
+                  disabled={attendeesLoading}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateAttendees} 
+                  variant="contained"
+                  color="primary"
+                  disabled={attendeesLoading || attendeesSuccess}
+                  startIcon={attendeesLoading ? <CircularProgress size={20} /> : <PersonAddIcon />}
+                >
+                  {attendeesLoading ? 'Updating...' : 'Save Changes'}
+                </Button>
               </Box>
             </CardContent>
           </Card>
