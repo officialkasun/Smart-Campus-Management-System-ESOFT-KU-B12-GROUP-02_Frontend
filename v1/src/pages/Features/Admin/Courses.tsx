@@ -262,12 +262,18 @@ const Courses = () => {
   const fetchInstructors = async () => {
     setLoadingInstructors(true);
     try {
-      const response = await axios.get(`${config.apiUrl}/api/users/lecturers`, {
+      const response = await axios.get(`${config.apiUrl}/api/users/lecturer`, {
         headers: {
           Authorization: `Bearer ${Cookies.get('token')}`,
         },
       });
-      setInstructors(response.data);
+      // Store only relevant instructor data
+      const instructorData = response.data.map((instructor: any) => ({
+        _id: instructor._id,
+        name: instructor.name,
+        email: instructor.email
+      }));
+      setInstructors(instructorData);
     } catch (err: any) {
       console.error('Error fetching instructors:', err);
     } finally {
