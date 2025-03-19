@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import config from '../../../config';
@@ -35,6 +35,13 @@ import {
   LinearProgress,
   SelectChangeEvent,
   InputAdornment,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Link,
+  Badge,
+  Grid,
 } from '@mui/material';
 import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -54,6 +61,14 @@ import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  Upload as UploadIcon,
+  AttachFile as AttachFileIcon,
+  PictureAsPdf as PdfIcon,
+  InsertDriveFile as DocIcon,
+  Slideshow as PptIcon,
+  Article as TxtIcon,
 } from '@mui/icons-material';
 
 // Define course interface
@@ -73,6 +88,7 @@ interface Course {
     endTime: string;
   };
   students: string[];
+  lectureMaterials: string[]; // Array of material paths
   createdAt: string;
 }
 
@@ -87,6 +103,7 @@ interface NewCourse {
     startTime: string;
     endTime: string;
   };
+  lectureMaterials?: string[]; // Optional since it will be handled by FormData
 }
 
 // New interface for editing a course
@@ -100,6 +117,7 @@ interface EditCourse {
     startTime: string;
     endTime: string;
   };
+  lectureMaterials?: string[]; // Optional since existing materials will be handled separately
 }
 
 // Define sorting order type
@@ -188,8 +206,36 @@ const Courses = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [editSuccess, setEditSuccess] = useState<boolean>(false);
 
-  const fetchCourses = async () => {
-    setLoading(true);
+  // New state for search functionality
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+  const [searchType, setSearchType] = useState<'code' | 'name'>('code');
+  
+  // New state for tracking last refresh time
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // New state for file uploads
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadLoading, setUploadLoading] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // State for edit form file uploads
+  const [editUploadedFiles, setEditUploadedFiles] = useState<File[]>([]);
+  const [editUploadError, setEditUploadError] = useState<string | null>(null);
+  const [removedMaterials, setRemovedMaterials] = useState<string[]>([]);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchCourses = async (showRefreshAnimation = false) => {
+    if (showRefreshAnimation) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
       const response = await axios.get(`${config.apiUrl}/api/courses`, {
         headers: {
@@ -198,11 +244,25 @@ const Courses = () => {
       });
       setCourses(response.data);
       setError(null);
+      
+      // Update last refresh time
+      setLastRefreshTime(new Date());
+      
+      // Reset search state if this is a manual refresh
+      if (showRefreshAnimation && searchPerformed) {
+        setSearchPerformed(false);
+        setSearchQuery('');
+        setSearchError(null);
+      }
     } catch (err: any) {
       console.error('Error fetching courses:', err);
       setError(err.response?.data?.message || 'Failed to fetch courses.');
     } finally {
-      setLoading(false);
+      if (showRefreshAnimation) {
+        setTimeout(() => setRefreshing(false), 500); // Show refresh animation for at least 500ms
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -345,6 +405,8 @@ const Courses = () => {
     });
     setValidationErrors({});
     setCreateError(null);
+    setUploadedFiles([]);
+    setUploadError(null);
     
     // Fetch instructors when opening the modal
     fetchInstructors();
@@ -513,15 +575,46 @@ const Courses = () => {
     setCreateError(null);
     
     try {
-      await axios.post(
-        `${config.apiUrl}/api/courses`,
-        newCourse,
-        {
-          headers: {
-            Authorization: `Bearer ${Cookies.get('token')}`
+      // If files are uploaded, use FormData
+      if (uploadedFiles.length > 0) {
+        const formData = new FormData();
+        
+        // Append course data
+        formData.append('name', newCourse.name);
+        formData.append('code', newCourse.code);
+        formData.append('description', newCourse.description);
+        formData.append('instructor', newCourse.instructor);
+        formData.append('schedule[day]', newCourse.schedule.day);
+        formData.append('schedule[startTime]', newCourse.schedule.startTime);
+        formData.append('schedule[endTime]', newCourse.schedule.endTime);
+        
+        // Append files
+        uploadedFiles.forEach(file => {
+          formData.append('lectureMaterials', file);
+        });
+        
+        await axios.post(
+          `${config.apiUrl}/api/courses`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${Cookies.get('token')}`,
+              'Content-Type': 'multipart/form-data'
+            }
           }
-        }
-      );
+        );
+      } else {
+        // No files, use regular JSON payload
+        await axios.post(
+          `${config.apiUrl}/api/courses`,
+          newCourse,
+          {
+            headers: {
+              Authorization: `Bearer ${Cookies.get('token')}`
+            }
+          }
+        );
+      }
       
       setCreateSuccess(true);
       
@@ -592,16 +685,20 @@ const Courses = () => {
       name: course.name,
       code: course.code,
       description: course.description,
-      instructor: course.instructor._id, // Ensure we're using the ID, not the full object
+      instructor: course.instructor._id,
       schedule: {
         day: course.schedule.day,
         startTime: course.schedule.startTime,
         endTime: course.schedule.endTime,
       },
+      lectureMaterials: course.lectureMaterials
     });
     setEditValidationErrors({});
     setEditError(null);
     setEditSuccess(false);
+    setEditUploadedFiles([]);
+    setEditUploadError(null);
+    setRemovedMaterials([]);
     
     // Fetch instructors when opening the modal
     fetchInstructors();
@@ -712,29 +809,64 @@ const Courses = () => {
     setEditLoading(true);
     setEditError(null);
     
-    // Create a clean payload for the API
-    const updatePayload = {
-      name: editCourse.name,
-      code: editCourse.code,
-      description: editCourse.description,
-      instructor: editCourse.instructor, // This should be just the ID
-      schedule: {
-        day: editCourse.schedule.day,
-        startTime: editCourse.schedule.startTime,
-        endTime: editCourse.schedule.endTime,
-      },
-    };
-    
     try {
-      await axios.put(
-        `${config.apiUrl}/api/courses/${courseToEdit._id}`,
-        updatePayload,
-        {
-          headers: {
-            Authorization: `Bearer ${Cookies.get('token')}`
-          }
+      // If there are new files or materials to remove, use FormData
+      if (editUploadedFiles.length > 0 || removedMaterials.length > 0) {
+        const formData = new FormData();
+        
+        // Append course data
+        formData.append('name', editCourse.name);
+        formData.append('code', editCourse.code);
+        formData.append('description', editCourse.description);
+        formData.append('instructor', editCourse.instructor);
+        formData.append('schedule[day]', editCourse.schedule.day);
+        formData.append('schedule[startTime]', editCourse.schedule.startTime);
+        formData.append('schedule[endTime]', editCourse.schedule.endTime);
+        
+        // Append files
+        editUploadedFiles.forEach(file => {
+          formData.append('lectureMaterials', file);
+        });
+        
+        // Append removed materials
+        if (removedMaterials.length > 0) {
+          formData.append('removedMaterials', JSON.stringify(removedMaterials));
         }
-      );
+        
+        await axios.put(
+          `${config.apiUrl}/api/courses/${courseToEdit._id}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${Cookies.get('token')}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+      } else {
+        // No files or removals, use regular JSON payload
+        const updatePayload = {
+          name: editCourse.name,
+          code: editCourse.code,
+          description: editCourse.description,
+          instructor: editCourse.instructor,
+          schedule: {
+            day: editCourse.schedule.day,
+            startTime: editCourse.schedule.startTime,
+            endTime: editCourse.schedule.endTime,
+          }
+        };
+        
+        await axios.put(
+          `${config.apiUrl}/api/courses/${courseToEdit._id}`,
+          updatePayload,
+          {
+            headers: {
+              Authorization: `Bearer ${Cookies.get('token')}`
+            }
+          }
+        );
+      }
       
       setEditSuccess(true);
       
@@ -756,6 +888,224 @@ const Courses = () => {
     }
   };
 
+  // Search course by code
+  const searchCourseByCode = async () => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, reset to show all courses
+      setSearchPerformed(false);
+      fetchCourses();
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+
+    try {
+      const response = await axios.get(
+        `${config.apiUrl}/api/courses/${searchQuery.trim()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      // If successful, update courses state with the single course
+      if (response.data) {
+        setCourses([response.data]);
+      } else {
+        setCourses([]);
+      }
+      setError(null);
+    } catch (err: any) {
+      console.error('Error searching course:', err);
+      setSearchError('Course not found with the provided code');
+      setCourses([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Search course by name
+  const searchCourseByName = async () => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, reset to show all courses
+      setSearchPerformed(false);
+      fetchCourses();
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+
+    try {
+      const response = await axios.get(
+        `${config.apiUrl}/api/courses/name/${searchQuery.trim()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      if (response.data && response.data.length > 0) {
+        setCourses(response.data);
+      } else {
+        setCourses([]);
+        setSearchError('No courses found with the provided name');
+      }
+    } catch (err: any) {
+      console.error('Error searching course by name:', err);
+      setSearchError('Failed to search for courses by name');
+      setCourses([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Handle search form submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchType === 'code') {
+      searchCourseByCode();
+    } else {
+      searchCourseByName();
+    }
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // Clear search error when input changes
+    if (searchError) {
+      setSearchError(null);
+    }
+  };
+
+  // Handle search type change
+  const handleSearchTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchType(e.target.value as 'code' | 'name');
+    // Clear search query and errors when changing search type
+    setSearchQuery('');
+    setSearchError(null);
+  };
+
+  // Clear search and show all courses again
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchError(null);
+    setSearchPerformed(false);
+    fetchCourses();
+  };
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    fetchCourses(true);
+  };
+
+  // Format the refresh time in a readable format
+  const formatRefreshTime = (date: Date) => {
+    return date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      hour12: true 
+    });
+  };
+
+  // Function to check if file type is allowed
+  const isFileTypeAllowed = (file: File): boolean => {
+    const allowedTypes = [
+      'application/pdf', // PDF
+      'application/msword', // DOC
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+      'application/vnd.ms-powerpoint', // PPT
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
+      'text/plain', // TXT
+    ];
+    return allowedTypes.includes(file.type);
+  };
+
+  // Function to get icon based on file type
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    switch (extension) {
+      case 'pdf':
+        return <PdfIcon color="error" />;
+      case 'doc':
+      case 'docx':
+        return <DocIcon color="primary" />;
+      case 'ppt':
+      case 'pptx':
+        return <PptIcon color="warning" />;
+      case 'txt':
+        return <TxtIcon color="info" />;
+      default:
+        return <AttachFileIcon />;
+    }
+  };
+
+  // Function to get file name from path
+  const getFileNameFromPath = (path: string): string => {
+    return path.split('/').pop() || path;
+  };
+
+  // Handle file selection for creating a course
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null);
+    
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      
+      // Check if all files are valid types
+      const invalidFiles = filesArray.filter(file => !isFileTypeAllowed(file));
+      
+      if (invalidFiles.length > 0) {
+        setUploadError('Only PDF, DOC, PPT, and TXT files are allowed');
+        return;
+      }
+      
+      setUploadedFiles(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  // Handle removing file from upload list
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle file selection for editing a course
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditUploadError(null);
+    
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      
+      // Check if all files are valid types
+      const invalidFiles = filesArray.filter(file => !isFileTypeAllowed(file));
+      
+      if (invalidFiles.length > 0) {
+        setEditUploadError('Only PDF, DOC, PPT, and TXT files are allowed');
+        return;
+      }
+      
+      setEditUploadedFiles(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  // Handle removing file from edit upload list
+  const handleRemoveEditFile = (index: number) => {
+    setEditUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle removing existing material
+  const handleRemoveExistingMaterial = (materialPath: string) => {
+    setRemovedMaterials(prev => [...prev, materialPath]);
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -771,20 +1121,122 @@ const Courses = () => {
         Course Management
       </Typography>
 
-      {error && <Typography color="error" className="mb-4">{error}</Typography>}
+      {error && !searchError && <Typography color="error" className="mb-4">{error}</Typography>}
+
+      {/* Add Search Bar */}
+      <Paper className="shadow-lg mb-4">
+        <Box p={2}>
+          <form onSubmit={handleSearchSubmit}>
+            <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={2} mb={2}>
+              {/* Search type radio buttons */}
+              <FormControl component="fieldset">
+                <Box display="flex" flexDirection="row">
+                  <FormControl component="fieldset">
+                    <Box display="flex" alignItems="center">
+                      <Typography variant="body2" mr={1}>Search by:</Typography>
+                      <Box display="flex" flexDirection="row">
+                        <Box display="flex" alignItems="center" mr={2}>
+                          <input
+                            type="radio"
+                            id="search-code"
+                            name="search-type"
+                            value="code"
+                            checked={searchType === 'code'}
+                            onChange={handleSearchTypeChange}
+                            className="mr-1"
+                          />
+                          <label htmlFor="search-code">Code</label>
+                        </Box>
+                        <Box display="flex" alignItems="center">
+                          <input
+                            type="radio"
+                            id="search-name"
+                            name="search-type"
+                            value="name"
+                            checked={searchType === 'name'}
+                            onChange={handleSearchTypeChange}
+                            className="mr-1"
+                          />
+                          <label htmlFor="search-name">Name</label>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </FormControl>
+                </Box>
+              </FormControl>
+            </Box>
+            
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder={searchType === 'code' ? "Search course by code..." : "Search course by name..."}
+              value={searchQuery}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear search"
+                      onClick={handleClearSearch}
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
+              {searchError && (
+                <Typography color="error" variant="body2">
+                  {searchError}
+                </Typography>
+              )}
+              {searchPerformed && !searchError && courses.length > 0 && (
+                <Typography variant="body2" color="primary">
+                  {courses.length} course{courses.length !== 1 ? 's' : ''} found
+                </Typography>
+              )}
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={searchLoading || !searchQuery.trim()}
+                className="ml-auto"
+                startIcon={searchLoading ? <CircularProgress size={20} /> : <SearchIcon />}
+              >
+                {searchLoading ? 'Searching...' : 'Search'}
+              </Button>
+            </Box>
+          </form>
+        </Box>
+      </Paper>
 
       <Paper className="shadow-lg">
         <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" component="div" className="font-semibold">
-            All Courses
-          </Typography>
+          <Box>
+            <Typography variant="h6" component="div" className="font-semibold">
+              {searchPerformed ? 'Search Results' : 'All Courses'}
+            </Typography>
+            {!searchPerformed && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                <span className='dark:text-gray-400 text-gray-700'>Last updated: {formatRefreshTime(lastRefreshTime)}</span>
+              </Typography>
+            )}
+          </Box>
           <Box display="flex" gap={2}>
             <Tooltip title="Refresh data">
               <span>
                 <IconButton
                   color="primary"
-                  onClick={fetchCourses}
-                  disabled={loading}
+                  onClick={handleRefresh}
+                  disabled={refreshing || loading}
+                  className={refreshing ? 'animate-spin' : ''}
                 >
                   <RefreshIcon />
                 </IconButton>
@@ -801,7 +1253,7 @@ const Courses = () => {
           </Box>
         </Box>
 
-        {loading ? (
+        {(loading || searchLoading || refreshing) ? (
           <Box p={4} display="flex" justifyContent="center">
             <CircularProgress />
           </Box>
@@ -1034,6 +1486,57 @@ const Courses = () => {
                   </div>
                 </div>
 
+                {/* Add Lecture Materials section */}
+                {selectedCourse.lectureMaterials && selectedCourse.lectureMaterials.length > 0 && (
+                  <>
+                    <Divider className="my-3" />
+                    
+                    <Typography variant="h6" className="mb-2">
+                      Lecture Materials
+                    </Typography>
+                    
+                    <Grid container spacing={1}>
+                      {selectedCourse.lectureMaterials.map((material, index) => (
+                        <Grid item xs={12} sm={6} key={index}>
+                          <Link 
+                            href={`${config.apiUrl}/${material}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            underline="none"
+                          >
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                p: 1,
+                                borderRadius: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                '&:hover': {
+                                  bgcolor: 'action.hover',
+                                }
+                              }}
+                            >
+                              {getFileIcon(material)}
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  ml: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {getFileNameFromPath(material)}
+                              </Typography>
+                            </Box>
+                          </Link>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </>
+                )}
+
                 <Box mt={4} display="flex" justifyContent="space-between">
                   <Box display="flex" gap={2}>
                     <button 
@@ -1222,6 +1725,67 @@ const Courses = () => {
                   </LocalizationProvider>
                 </Box>
 
+                {/* Lecture Materials Upload */}
+                <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>
+                  Lecture Materials
+                </Typography>
+                
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                  multiple
+                />
+                
+                <Box sx={{ mb: 2 }}>
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<UploadIcon />}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={createLoading}
+                  >
+                    Upload Files
+                  </Button>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                    Only PDF, DOC, PPT, and TXT files are allowed
+                  </Typography>
+                </Box>
+                
+                {uploadError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {uploadError}
+                  </Alert>
+                )}
+                
+                {uploadedFiles.length > 0 && (
+                  <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
+                    {uploadedFiles.map((file, index) => (
+                      <ListItem
+                        key={index}
+                        secondaryAction={
+                          <IconButton 
+                            edge="end" 
+                            aria-label="delete"
+                            onClick={() => handleRemoveFile(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        }
+                      >
+                        <ListItemIcon>
+                          {getFileIcon(file.name)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={file.name}
+                          secondary={`${(file.size / 1024).toFixed(2)} KB`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+
                 {createLoading && (
                   <Box sx={{ width: '100%', mt: 2 }}>
                     <LinearProgress />
@@ -1405,6 +1969,123 @@ const Courses = () => {
                     </DemoContainer>
                   </LocalizationProvider>
                 </Box>
+
+                {/* Lecture Materials Section */}
+                <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>
+                  Lecture Materials
+                </Typography>
+                
+                {/* Existing Materials */}
+                {courseToEdit && courseToEdit.lectureMaterials && courseToEdit.lectureMaterials.length > 0 ? (
+                  <Box mb={2}>
+                    <Typography variant="body2" color="text.secondary" mb={1}>
+                      Current Materials:
+                    </Typography>
+                    <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                      {courseToEdit.lectureMaterials
+                        .filter(material => !removedMaterials.includes(material))
+                        .map((material, index) => (
+                          <ListItem
+                            key={index}
+                            secondaryAction={
+                              <IconButton 
+                                edge="end" 
+                                aria-label="delete"
+                                onClick={() => handleRemoveExistingMaterial(material)}
+                                disabled={editLoading}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            }
+                          >
+                            <ListItemIcon>
+                              {getFileIcon(material)}
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={
+                                <Link 
+                                  href={`${config.apiUrl}/${material}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                >
+                                  {getFileNameFromPath(material)}
+                                </Link>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                    </List>
+                  </Box>
+                ) : (
+                  !removedMaterials.length && courseToEdit && courseToEdit.lectureMaterials && (
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                      No materials currently uploaded
+                    </Typography>
+                  )
+                )}
+                
+                {/* Upload New Materials */}
+                <input
+                  type="file"
+                  ref={editFileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleEditFileSelect}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                  multiple
+                />
+                
+                <Box sx={{ mb: 2 }}>
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<UploadIcon />}
+                    onClick={() => editFileInputRef.current?.click()}
+                    disabled={editLoading}
+                  >
+                    Upload New Files
+                  </Button>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                    Only PDF, DOC, PPT, and TXT files are allowed
+                  </Typography>
+                </Box>
+                
+                {editUploadError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {editUploadError}
+                  </Alert>
+                )}
+                
+                {/* New Files to Upload */}
+                {editUploadedFiles.length > 0 && (
+                  <Box mb={2}>
+                    <Typography variant="body2" color="text.secondary" mb={1}>
+                      New Files to Upload:
+                    </Typography>
+                    <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                      {editUploadedFiles.map((file, index) => (
+                        <ListItem
+                          key={index}
+                          secondaryAction={
+                            <IconButton 
+                              edge="end" 
+                              aria-label="delete"
+                              onClick={() => handleRemoveEditFile(index)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          }
+                        >
+                          <ListItemIcon>
+                            {getFileIcon(file.name)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={file.name}
+                            secondary={`${(file.size / 1024).toFixed(2)} KB`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
 
                 {editLoading && (
                   <Box sx={{ width: '100%', mt: 2 }}>
