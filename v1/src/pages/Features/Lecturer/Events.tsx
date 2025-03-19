@@ -22,6 +22,8 @@ const Events: React.FC = () => {
         {events.map((event) => (
           <li key={event.id}>
             <h2>{event.title}</h2>
+            <p>Date: {event.date}</p>
+            <p>Location: {event.location}</p>
           </li>
         ))}
       </ul>
