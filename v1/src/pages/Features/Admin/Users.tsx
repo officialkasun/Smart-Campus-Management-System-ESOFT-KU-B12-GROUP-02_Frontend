@@ -72,6 +72,12 @@ interface NewUser {
   role: string;
 }
 
+interface EditUserData {
+  name: string;
+  email: string;
+  role: string;
+}
+
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -115,6 +121,21 @@ const Users = () => {
   // New state for tracking last refresh time
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
   const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // New state variables for edit user
+  const [editUserData, setEditUserData] = useState<EditUserData>({
+    name: '',
+    email: '',
+    role: ''
+  });
+  const [editUserLoading, setEditUserLoading] = useState<boolean>(false);
+  const [editUserError, setEditUserError] = useState<string | null>(null);
+  const [editUserSuccess, setEditUserSuccess] = useState<string | null>(null);
+  const [editValidationErrors, setEditValidationErrors] = useState<{
+    name?: string;
+    email?: string;
+    role?: string;
+  }>({});
 
   const fetchUsers = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
@@ -175,6 +196,15 @@ const Users = () => {
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setEditModalOpen(true);
+    // Reset edit states and initialize form data
+    setEditUserData({
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
+    setEditValidationErrors({});
+    setEditUserError(null);
+    setEditUserSuccess(null);
   };
 
   const handleDeleteUser = (user: User) => {
@@ -355,6 +385,98 @@ const Users = () => {
       setAddUserLoading(false);
       setAddUserError(err.response?.data?.message || 'Failed to add user. Please try again.');
       console.error('Error adding user:', err);
+    }
+  };
+
+  // Handle input changes for edit user form
+  const handleEditUserChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+    const { name, value } = e.target;
+    if (name) {
+      setEditUserData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+      
+      // Clear validation error when field is updated
+      if (editValidationErrors[name as keyof typeof editValidationErrors]) {
+        setEditValidationErrors(prev => ({
+          ...prev,
+          [name]: undefined
+        }));
+      }
+    }
+  };
+
+  // Validate edit form
+  const validateEditForm = (): boolean => {
+    const errors: {
+      name?: string;
+      email?: string;
+      role?: string;
+    } = {};
+    
+    // Name validation
+    if (!editUserData.name.trim()) {
+      errors.name = 'Name is required';
+    } else if (editUserData.name.length < 2) {
+      errors.name = 'Name must be at least 2 characters';
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!editUserData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(editUserData.email)) {
+      errors.email = 'Enter a valid email address';
+    }
+    
+    // Role validation
+    if (!editUserData.role) {
+      errors.role = 'Role is required';
+    }
+    
+    setEditValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit user edit
+  const handleSubmitEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedUser) return;
+    if (!validateEditForm()) return;
+    
+    setEditUserLoading(true);
+    setEditUserError(null);
+    setEditUserSuccess(null);
+    
+    try {
+      await axios.put(
+        `${config.apiUrl}/api/users/${selectedUser._id}`,
+        editUserData,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      setEditUserSuccess('User updated successfully!');
+      setEditUserLoading(false);
+      
+      // Refresh users list
+      fetchUsers();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setEditModalOpen(false);
+        setEditUserSuccess(null);
+      }, 2000);
+      
+    } catch (err: any) {
+      setEditUserLoading(false);
+      setEditUserError(err.response?.data?.message || 'Failed to update user. Please try again.');
+      console.error('Error updating user:', err);
     }
   };
 
@@ -752,7 +874,7 @@ const Users = () => {
       {/* Edit User Modal */}
       <Modal
         open={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
+        onClose={() => !editUserLoading && setEditModalOpen(false)}
         aria-labelledby="edit-user-modal"
       >
         <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
@@ -763,7 +885,15 @@ const Users = () => {
                   <span className='font-semibold text-blue-600'>Edit User</span>
                 </Typography>
                 
-                <Box component="form" sx={{ mt: 1 }}>
+                {editUserError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>{editUserError}</Alert>
+                )}
+                
+                {editUserSuccess && (
+                  <Alert severity="success" sx={{ mb: 2 }}>{editUserSuccess}</Alert>
+                )}
+                
+                <Box component="form" onSubmit={handleSubmitEditUser} sx={{ mt: 1 }}>
                   <TextField
                     margin="normal"
                     fullWidth
@@ -777,7 +907,12 @@ const Users = () => {
                     fullWidth
                     required
                     label="Name"
-                    defaultValue={selectedUser.name}
+                    name="name"
+                    value={editUserData.name}
+                    onChange={handleEditUserChange}
+                    error={!!editValidationErrors.name}
+                    helperText={editValidationErrors.name}
+                    disabled={editUserLoading || !!editUserSuccess}
                   />
                   
                   <TextField
@@ -785,38 +920,58 @@ const Users = () => {
                     fullWidth
                     required
                     label="Email"
+                    name="email"
                     type="email"
-                    defaultValue={selectedUser.email}
+                    value={editUserData.email}
+                    onChange={handleEditUserChange}
+                    error={!!editValidationErrors.email}
+                    helperText={editValidationErrors.email}
+                    disabled={editUserLoading || !!editUserSuccess}
                   />
                   
-                  <TextField
+                  <FormControl 
+                    fullWidth 
                     margin="normal"
-                    fullWidth
-                    select
-                    label="Role"
-                    defaultValue={selectedUser.role}
-                    SelectProps={{
-                      native: true,
-                    }}
+                    error={!!editValidationErrors.role}
+                    disabled={editUserLoading || !!editUserSuccess}
                   >
-                    <option value="admin">Admin</option>
-                    <option value="lecturer">Lecturer</option>
-                    <option value="student">Student</option>
-                  </TextField>
+                    <InputLabel id="edit-role-select-label">Role</InputLabel>
+                    <Select
+                      labelId="edit-role-select-label"
+                      name="role"
+                      value={editUserData.role}
+                      label="Role"
+                      onChange={handleEditUserChange}
+                    >
+                      <MenuItem value="admin">Admin</MenuItem>
+                      <MenuItem value="lecturer">Lecturer</MenuItem>
+                      <MenuItem value="student">Student</MenuItem>
+                    </Select>
+                    {editValidationErrors.role && (
+                      <FormHelperText>{editValidationErrors.role}</FormHelperText>
+                    )}
+                  </FormControl>
+
+                  {editUserLoading && (
+                    <Box sx={{ width: '100%', mt: 2 }}>
+                      <LinearProgress />
+                    </Box>
+                  )}
                   
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
                     <Button 
                       onClick={() => setEditModalOpen(false)} 
                       variant="outlined"
+                      disabled={editUserLoading}
                     >
                       Cancel
                     </Button>
                     <button 
-                      type="button" 
-                      className="btn bg-blue-500 p-3 rounded-3xl shadow-lg hover:bg-blue-600 hover:scale-105 cursor-pointer text-white"
-                      onClick={() => setEditModalOpen(false)}
+                      type="submit" 
+                      className="btn bg-blue-500 p-3 rounded-3xl shadow-lg hover:bg-blue-600 hover:scale-105 cursor-pointer text-white disabled:opacity-50 disabled:hover:bg-blue-500 disabled:hover:scale-100"
+                      disabled={editUserLoading || !!editUserSuccess}
                     >
-                      Save Changes
+                      {editUserLoading ? 'Updating...' : 'Save Changes'}
                     </button>
                   </Box>
                 </Box>
