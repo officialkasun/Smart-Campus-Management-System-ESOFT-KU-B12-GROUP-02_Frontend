@@ -810,76 +810,75 @@ const Courses = () => {
     setEditError(null);
     
     try {
-      // If there are new files or materials to remove, use FormData
-      if (editUploadedFiles.length > 0 || removedMaterials.length > 0) {
+      const updatePayload = {
+        name: editCourse.name,
+        code: editCourse.code,
+        description: editCourse.description,
+        instructor: editCourse.instructor,
+        schedule: {
+          day: editCourse.schedule.day,
+          startTime: editCourse.schedule.startTime,
+          endTime: editCourse.schedule.endTime,
+        },
+        lectureMaterials: editCourse.lectureMaterials, // Pass updated materials
+      };
+
+      // If there are new files, use FormData
+      if (editUploadedFiles.length > 0) {
         const formData = new FormData();
-        
+
         // Append course data
-        formData.append('name', editCourse.name);
-        formData.append('code', editCourse.code);
-        formData.append('description', editCourse.description);
-        formData.append('instructor', editCourse.instructor);
-        formData.append('schedule[day]', editCourse.schedule.day);
-        formData.append('schedule[startTime]', editCourse.schedule.startTime);
-        formData.append('schedule[endTime]', editCourse.schedule.endTime);
-        
-        // Append files
+        Object.entries(updatePayload).forEach(([key, value]) => {
+          if (key === 'schedule') {
+            Object.entries(value as Record<string, string>).forEach(([subKey, subValue]) => {
+              formData.append(`schedule[${subKey}]`, subValue);
+            });
+          } else if (key === 'lectureMaterials') {
+            (value as string[]).forEach(material => formData.append('lectureMaterials', material));
+          } else {
+            formData.append(key, value as string);
+          }
+        });
+
+        // Append new files
         editUploadedFiles.forEach(file => {
           formData.append('lectureMaterials', file);
         });
-        
-        // Append removed materials
-        if (removedMaterials.length > 0) {
-          formData.append('removedMaterials', JSON.stringify(removedMaterials));
-        }
-        
+
         await axios.put(
           `${config.apiUrl}/api/courses/${courseToEdit._id}`,
           formData,
           {
             headers: {
               Authorization: `Bearer ${Cookies.get('token')}`,
-              'Content-Type': 'multipart/form-data'
-            }
+              'Content-Type': 'multipart/form-data',
+            },
           }
         );
       } else {
-        // No files or removals, use regular JSON payload
-        const updatePayload = {
-          name: editCourse.name,
-          code: editCourse.code,
-          description: editCourse.description,
-          instructor: editCourse.instructor,
-          schedule: {
-            day: editCourse.schedule.day,
-            startTime: editCourse.schedule.startTime,
-            endTime: editCourse.schedule.endTime,
-          }
-        };
-        
+        // No new files, use JSON payload
         await axios.put(
           `${config.apiUrl}/api/courses/${courseToEdit._id}`,
           updatePayload,
           {
             headers: {
-              Authorization: `Bearer ${Cookies.get('token')}`
-            }
+              Authorization: `Bearer ${Cookies.get('token')}`,
+            },
           }
         );
       }
-      
+
       setEditSuccess(true);
-      
+
       // Refresh courses list
       fetchCourses();
-      
+
       // Close modal after delay
       setTimeout(() => {
         setEditModalOpen(false);
         setCourseToEdit(null);
         setEditSuccess(false);
       }, 2000);
-      
     } catch (err: any) {
       console.error('Error updating course:', err);
       setEditError(err.response?.data?.message || 'Failed to update course. Please try again.');
@@ -1104,6 +1103,10 @@ const Courses = () => {
   // Handle removing existing material
   const handleRemoveExistingMaterial = (materialPath: string) => {
     setRemovedMaterials(prev => [...prev, materialPath]);
+    setEditCourse(prev => ({
+      ...prev,
+      lectureMaterials: prev.lectureMaterials?.filter(material => material !== materialPath),
+    }));
   };
 
   return (
@@ -1491,31 +1494,35 @@ const Courses = () => {
                   <>
                     <Divider className="my-3" />
                     
-                    <Typography variant="h6" className="mb-2">
-                      Lecture Materials
-                    </Typography>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                      <Typography variant="h6">
+                        Lecture Materials
+                      </Typography>
+                    </Box>
                     
                     <Grid container spacing={1}>
                       {selectedCourse.lectureMaterials.map((material, index) => (
                         <Grid item xs={12} sm={6} key={index}>
-                          <Link 
-                            href={`${config.apiUrl}/${material}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            underline="none"
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              p: 1,
+                              borderRadius: 1,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              '&:hover': {
+                                bgcolor: 'action.hover',
+                              }
+                            }}
                           >
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                p: 1,
-                                borderRadius: 1,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                '&:hover': {
-                                  bgcolor: 'action.hover',
-                                }
-                              }}
+                            <Link 
+                              href={`${config.apiUrl}/${material}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="none"
+                              sx={{ display: 'flex', alignItems: 'center', width: '80%' }}
                             >
                               {getFileIcon(material)}
                               <Typography 
@@ -1529,8 +1536,16 @@ const Courses = () => {
                               >
                                 {getFileNameFromPath(material)}
                               </Typography>
-                            </Box>
-                          </Link>
+                            </Link>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleRemoveExistingMaterial(material)}
+                              title="Remove material"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
                         </Grid>
                       ))}
                     </Grid>
@@ -1976,44 +1991,44 @@ const Courses = () => {
                 </Typography>
                 
                 {/* Existing Materials */}
-                {courseToEdit && courseToEdit.lectureMaterials && courseToEdit.lectureMaterials.length > 0 ? (
+                {editCourse.lectureMaterials && editCourse.lectureMaterials.length > 0 ? (
                   <Box mb={2}>
                     <Typography variant="body2" color="text.secondary" mb={1}>
                       Current Materials:
                     </Typography>
                     <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
-                      {courseToEdit.lectureMaterials
-                        .filter(material => !removedMaterials.includes(material))
-                        .map((material, index) => (
-                          <ListItem
-                            key={index}
-                            secondaryAction={
-                              <IconButton 
-                                edge="end" 
-                                aria-label="delete"
-                                onClick={() => handleRemoveExistingMaterial(material)}
-                                disabled={editLoading}
+                      {editCourse.lectureMaterials.map((material, index) => (
+                        <ListItem
+                          key={index}
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              aria-label="mark for deletion"
+                              onClick={() => handleRemoveExistingMaterial(material)}
+                              disabled={editLoading}
+                              color="error"
+                              title="Remove material (will be deleted when form is submitted)"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          }
+                        >
+                          <ListItemIcon>
+                            {getFileIcon(material)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Link 
+                                href={`${config.apiUrl}/${material}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
                               >
-                                <DeleteIcon />
-                              </IconButton>
+                                {getFileNameFromPath(material)}
+                              </Link>
                             }
-                          >
-                            <ListItemIcon>
-                              {getFileIcon(material)}
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={
-                                <Link 
-                                  href={`${config.apiUrl}/${material}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                >
-                                  {getFileNameFromPath(material)}
-                                </Link>
-                              }
-                            />
-                          </ListItem>
-                        ))}
+                          />
+                        </ListItem>
+                      ))}
                     </List>
                   </Box>
                 ) : (
@@ -2022,6 +2037,42 @@ const Courses = () => {
                       No materials currently uploaded
                     </Typography>
                   )
+                )}
+                
+                {/* Show materials marked for deletion */}
+                {removedMaterials.length > 0 && (
+                  <Box mb={2}>
+                    <Typography variant="body2" color="error" mb={1}>
+                      Materials to be removed:
+                    </Typography>
+                    <List dense sx={{ bgcolor: 'rgba(211, 47, 47, 0.1)', borderRadius: 1 }}>
+                      {removedMaterials.map((material, index) => (
+                        <ListItem
+                          key={index}
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              aria-label="restore material"
+                              onClick={() => setRemovedMaterials(prev => prev.filter(m => m !== material))}
+                              disabled={editLoading}
+                              color="primary"
+                              title="Restore material"
+                            >
+                              <RefreshIcon />
+                            </IconButton>
+                          }
+                        >
+                          <ListItemIcon>
+                            {getFileIcon(material)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={getFileNameFromPath(material)}
+                            secondary="Will be removed on update"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
                 )}
                 
                 {/* Upload New Materials */}
