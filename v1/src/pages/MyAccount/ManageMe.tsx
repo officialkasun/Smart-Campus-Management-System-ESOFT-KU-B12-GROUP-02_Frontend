@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  CircularProgress,
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -37,6 +38,7 @@ import {
   Visibility,
   VisibilityOff,
   Lock as LockIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
 
@@ -82,6 +84,8 @@ const getPasswordStrengthColor = (strength: number) => {
 
 const ManageMe = () => {
   const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -101,21 +105,86 @@ const ManageMe = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Try to get the user cookie using js-cookie library
-    const userCookie = Cookies.get('user');
-    
-    if (userCookie) {
-      try {
-        const parsedUserData = JSON.parse(userCookie);
-        setUserData(parsedUserData);
-        
-        
-        
-      } catch (error) {
-        console.error('Error parsing user cookie:', error);
+    const fetchUserData = async () => {
+      setLoading(true);
+      setError(null);
+
+      // Try to get the user cookie using js-cookie library
+      const userCookie = Cookies.get('user');
+      const token = Cookies.get('token');
+      
+      if (!userCookie || !token) {
+        setLoading(false);
+        return;
       }
-    }
+      
+      try {
+        // First parse cookie to get initial data and the user ID
+        const parsedUserData = JSON.parse(userCookie);
+        
+        // Fetch the latest data from API
+        const response = await axios.get(
+          `${config.apiUrl}/api/users/${parsedUserData.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        // Update user data state with API response
+        const updatedUserData = response.data;
+        setUserData(updatedUserData);
+        
+        // Update the cookie with fresh data
+        Cookies.set('user', JSON.stringify(updatedUserData));
+        
+      } catch (error: any) {
+        console.error('Error fetching user data:', error);
+        setError('Failed to load user data');
+        
+        // If API fails, try to at least show the cookie data
+        if (userCookie) {
+          try {
+            const parsedUserData = JSON.parse(userCookie);
+            setUserData(parsedUserData);
+          } catch (e) {
+            console.error('Error parsing user cookie:', e);
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
   }, []);
+
+  const refreshUserData = async () => {
+    if (!userData?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `${config.apiUrl}/api/users/${userData.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      const freshUserData = response.data;
+      setUserData(freshUserData);
+      Cookies.set('user', JSON.stringify(freshUserData));
+      setError(null);
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      setError('Failed to refresh user data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenPasswordModal = () => {
     setPasswordModalOpen(true);
@@ -312,7 +381,25 @@ const ManageMe = () => {
         My Account
       </Typography>
 
-      {userData ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center p-8">
+          <CircularProgress />
+          <Typography variant="body1" className="mt-4">
+            Loading your account information...
+          </Typography>
+        </div>
+      ) : error ? (
+        <Alert 
+          severity="error" 
+          action={
+            <Button color="inherit" size="small" onClick={refreshUserData}>
+              <RefreshIcon fontSize="small" className="mr-1" /> Retry
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      ) : userData ? (
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <motion.div
@@ -321,6 +408,13 @@ const ManageMe = () => {
             >
               <Card className="shadow-lg">
                 <CardContent className="flex flex-col items-center p-6">
+                  {/* Refresh button */}
+                  <Box className="self-end">
+                    <IconButton onClick={refreshUserData} title="Refresh user data">
+                      <RefreshIcon />
+                    </IconButton>
+                  </Box>
+                  
                   <Avatar 
                     src={userData.profilePic || undefined} 
                     className="w-24 h-24 mb-4 bg-blue-600"
