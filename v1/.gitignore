@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+src/pages/Features/Lecturer
 dist-ssr
 *.local
 .env
