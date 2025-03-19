@@ -3,6 +3,7 @@ import React from 'react';
 import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
 import SettingsIcon from '@mui/icons-material/Settings';
+import EventIcon from '@mui/icons-material/Event';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 
 // Student Icons
@@ -58,6 +59,14 @@ const navigationConfig: RoleNavConfig = {
       description: 'Create and manage courses',
       icon: <SchoolIcon fontSize="large" className="text-green-600 dark:text-green-400" />,
       path: '/admin/courses',
+      action: 'Manage Courses'
+    },
+    {
+      id: 'events',
+      title: 'Event Management',
+      description: 'Create and manage events',
+      icon: <EventIcon fontSize="large" className="text-green-800 dark:text-green-600" />,
+      path: '/admin/events',
       action: 'Manage Courses'
     },
     {
