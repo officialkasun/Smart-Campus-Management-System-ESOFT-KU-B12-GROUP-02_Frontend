@@ -19,10 +19,23 @@ import {
   CircularProgress,
   Tooltip,
   TableSortLabel,
+  Modal,
+  Card,
+  CardContent,
+  Divider,
+  Button,
+  Avatar,
 } from '@mui/material';
 import {
   Visibility as VisibilityIcon,
   Refresh as RefreshIcon,
+  School as SchoolIcon,
+  AccessTime as AccessTimeIcon,
+  Person as PersonIcon,
+  Description as DescriptionIcon,
+  Code as CodeIcon,
+  Schedule as ScheduleIcon,
+  Group as GroupIcon,
 } from '@mui/icons-material';
 
 // Define course interface
@@ -61,6 +74,10 @@ const Courses = () => {
   // New state for sorting
   const [sortOrder, setSortOrder] = useState<Order>('asc');
   const [sortField, setSortField] = useState<SortField>(null);
+
+  // New state for viewing course details
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState<boolean>(false);
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -121,6 +138,12 @@ const Courses = () => {
       return -compareValues(a, b, sortField);
     });
   }, [courses, sortField, sortOrder]);
+
+  // Function to handle viewing a course
+  const handleViewCourse = (course: Course) => {
+    setSelectedCourse(course);
+    setViewModalOpen(true);
+  };
 
   return (
     <motion.div
@@ -222,7 +245,11 @@ const Courses = () => {
                       </TableCell>
                       <TableCell><span className='dark:text-white text-black'>{new Date(course.createdAt).toLocaleDateString()}</span></TableCell>
                       <TableCell>
-                        <IconButton size="small" color="primary">
+                        <IconButton 
+                          size="small" 
+                          color="primary"
+                          onClick={() => handleViewCourse(course)}
+                        >
                           <VisibilityIcon fontSize="small" />
                         </IconButton>
                       </TableCell>
@@ -252,6 +279,124 @@ const Courses = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
+
+      {/* Course Details Modal */}
+      <Modal
+        open={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        aria-labelledby="course-details-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          {selectedCourse && (
+            <Card className="shadow-none">
+              <CardContent className="p-6">
+                <Box display="flex" alignItems="center" mb={3}>
+                  <Avatar 
+                    sx={{ width: 56, height: 56, mr: 2, bgcolor: 'primary.main' }}
+                  >
+                    <SchoolIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" className="font-bold">
+                      {selectedCourse.name}
+                    </Typography>
+                    <Chip 
+                      label={selectedCourse.code}
+                      color="primary"
+                      size="small"
+                    />
+                  </Box>
+                </Box>
+
+                <Divider className="my-3" />
+
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <CodeIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Course Code
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedCourse.code}
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <DescriptionIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Description
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedCourse.description}
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <PersonIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Instructor
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedCourse.instructor.name} ({selectedCourse.instructor.email})
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <ScheduleIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Schedule
+                      </Typography>
+                      <Typography variant="body1">
+                        {`${selectedCourse.schedule.day}, ${selectedCourse.schedule.startTime} - ${selectedCourse.schedule.endTime}`}
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <GroupIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Students Enrolled
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedCourse.students.length}
+                      </Typography>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center">
+                    <AccessTimeIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Created On
+                      </Typography>
+                      <Typography variant="body1">
+                        {new Date(selectedCourse.createdAt).toLocaleString()}
+                      </Typography>
+                    </div>
+                  </div>
+                </div>
+
+                <Box mt={4} display="flex" justifyContent="flex-end">
+                  <Button 
+                    onClick={() => setViewModalOpen(false)} 
+                    variant="contained"
+                  >
+                    Close
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </Modal>
     </motion.div>
   );
 };
