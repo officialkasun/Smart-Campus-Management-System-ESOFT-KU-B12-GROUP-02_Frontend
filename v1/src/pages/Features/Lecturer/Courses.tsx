@@ -22,6 +22,8 @@ const Courses: React.FC = () => {
         {courses.map((course) => (
           <li key={course.id}>
             <h2>{course.name}</h2>
+            <p>Code: {course.code}</p>
+            <p>Lecturer: {course.lecturer}</p>
           </li>
         ))}
       </ul>
