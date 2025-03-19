@@ -933,7 +933,7 @@ const Users = () => {
         onClose={() => setViewModalOpen(false)}
         aria-labelledby="view-user-modal"
       >
-        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
           {selectedUser && (
             <Card className="shadow-none">
               <CardContent className="p-6">
@@ -1049,7 +1049,7 @@ const Users = () => {
         onClose={() => !editUserLoading && setEditModalOpen(false)}
         aria-labelledby="edit-user-modal"
       >
-        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
           {selectedUser && (
             <Card className="shadow-none">
               <CardContent className="p-6">
@@ -1206,7 +1206,7 @@ const Users = () => {
         onClose={handleCloseAddModal}
         aria-labelledby="add-user-modal"
       >
-        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
           <Card className="shadow-none">
             <CardContent className="p-6">
               <Typography variant="h6" component="h2" sx={{ mb: 3 }}>

@@ -25,7 +25,22 @@ import {
   Divider,
   Button,
   Avatar,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  FormHelperText,
+  Alert,
+  LinearProgress,
+  SelectChangeEvent,
+  InputAdornment,
 } from '@mui/material';
+import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import dayjs from 'dayjs';
 import {
   Visibility as VisibilityIcon,
   Refresh as RefreshIcon,
@@ -36,6 +51,7 @@ import {
   Code as CodeIcon,
   Schedule as ScheduleIcon,
   Group as GroupIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 
 // Define course interface
@@ -58,11 +74,27 @@ interface Course {
   createdAt: string;
 }
 
+// New interface for creating a course
+interface NewCourse {
+  name: string;
+  code: string;
+  description: string;
+  instructor: string;
+  schedule: {
+    day: string;
+    startTime: string;
+    endTime: string;
+  };
+}
+
 // Define sorting order type
 type Order = 'asc' | 'desc';
 
 // Define sortable fields
 type SortField = 'name' | 'code' | 'instructor' | 'createdAt' | null;
+
+// Define days of week for dropdown
+const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const Courses = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -78,6 +110,35 @@ const Courses = () => {
   // New state for viewing course details
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState<boolean>(false);
+
+  // New state for creating courses
+  const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
+  const [newCourse, setNewCourse] = useState<NewCourse>({
+    name: '',
+    code: '',
+    description: '',
+    instructor: '',
+    schedule: {
+      day: 'Monday',
+      startTime: '',
+      endTime: '',
+    },
+  });
+  const [validationErrors, setValidationErrors] = useState<{
+    name?: string;
+    code?: string;
+    description?: string;
+    instructor?: string;
+    startTime?: string;
+    endTime?: string;
+  }>({});
+  const [createLoading, setCreateLoading] = useState<boolean>(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<boolean>(false);
+  
+  // State for instructors (lecturers)
+  const [instructors, setInstructors] = useState<{_id: string, name: string, email: string}[]>([]);
+  const [loadingInstructors, setLoadingInstructors] = useState<boolean>(false);
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -197,6 +258,236 @@ const Courses = () => {
     return currentTime >= startTime && currentTime <= endTime;
   };
 
+  // Fetch instructors (lecturers)
+  const fetchInstructors = async () => {
+    setLoadingInstructors(true);
+    try {
+      const response = await axios.get(`${config.apiUrl}/api/users/lecturers`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      setInstructors(response.data);
+    } catch (err: any) {
+      console.error('Error fetching instructors:', err);
+    } finally {
+      setLoadingInstructors(false);
+    }
+  };
+
+  // Handle opening the create course modal
+  const handleOpenCreateModal = () => {
+    setCreateModalOpen(true);
+    setNewCourse({
+      name: '',
+      code: '',
+      description: '',
+      instructor: '',
+      schedule: {
+        day: 'Monday',
+        startTime: '',
+        endTime: '',
+      },
+    });
+    setValidationErrors({});
+    setCreateError(null);
+    
+    // Fetch instructors when opening the modal
+    fetchInstructors();
+  };
+
+  // Modify handleNewCourseChange to handle MUI TimePicker changes
+  const handleNewCourseChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }> | null, field?: string) => {
+    // If this is a time change from the TimePicker
+    if (field === 'startTime' || field === 'endTime') {
+      const timeValue = e as dayjs.Dayjs | null;
+      
+      if (timeValue) {
+        // Format time as HH:MM AM/PM
+        const formattedTime = timeValue.format('h:mm A');
+        
+        setNewCourse(prev => ({
+          ...prev,
+          schedule: {
+            ...prev.schedule,
+            [field]: formattedTime
+          }
+        }));
+        
+        // Clear validation error
+        if (validationErrors[field as 'startTime' | 'endTime']) {
+          setValidationErrors(prev => ({
+            ...prev,
+            [field]: undefined
+          }));
+        }
+      }
+    } 
+    // Otherwise this is a standard input change
+    else if (e && 'target' in e) {
+      const { name, value } = e.target;
+      if (!name) return;
+      
+      if (name === 'day') {
+        setNewCourse(prev => ({
+          ...prev,
+          schedule: {
+            ...prev.schedule,
+            [name]: value
+          }
+        }));
+      } else {
+        setNewCourse(prev => ({
+          ...prev,
+          [name]: value
+        }));
+        
+        // Clear validation error
+        if (validationErrors[name as keyof typeof validationErrors]) {
+          setValidationErrors(prev => ({
+            ...prev,
+            [name]: undefined
+          }));
+        }
+      }
+    }
+  };
+
+  // Convert time string to dayjs object
+  const parseTimeToDayjs = (timeStr: string): dayjs.Dayjs | null => {
+    if (!timeStr) return null;
+    return dayjs(timeStr, 'h:mm A');
+  };
+
+  // Helper function to convert 24-hour format to 12-hour format with AM/PM
+  const convertTo12HourFormat = (time24: string): string => {
+    if (!time24 || !time24.includes(':')) return time24;
+    
+    const [hourStr, minuteStr] = time24.split(':');
+    let hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr, 10);
+    
+    const period = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12; // Convert to 12-hour format
+    
+    return `${hour}:${minute.toString().padStart(2, '0')} ${period}`;
+  };
+  
+  // Helper function to convert 12-hour format to 24-hour format for the time picker
+  const convertTo24HourFormat = (time12: string): string => {
+    if (!time12) return '';
+    
+    const isPM = time12.toLowerCase().includes('pm');
+    const timeOnly = time12.replace(/\s*[APap][Mm]\s*$/, '');
+    
+    const [hourStr, minuteStr] = timeOnly.split(':');
+    let hour = parseInt(hourStr, 10);
+    
+    if (isPM && hour < 12) hour += 12;
+    if (!isPM && hour === 12) hour = 0;
+    
+    return `${hour.toString().padStart(2, '0')}:${minuteStr}`;
+  };
+
+  // Helper to convert time string to Date object
+  const parseTimeString = (timeStr: string): Date | null => {
+    if (!timeStr) return null;
+    
+    const today = new Date();
+    const [time, period] = timeStr.split(' ');
+    
+    if (!time) return null;
+    
+    let [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
+    
+    // Convert to 24-hour format if needed
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    const result = new Date(today);
+    result.setHours(hours);
+    result.setMinutes(minutes || 0);
+    return result;
+  };
+
+  // Validate the form
+  const validateForm = (): boolean => {
+    const errors: {
+      name?: string;
+      code?: string;
+      description?: string;
+      instructor?: string;
+      startTime?: string;
+      endTime?: string;
+    } = {};
+    
+    if (!newCourse.name.trim()) {
+      errors.name = 'Course name is required';
+    }
+    
+    if (!newCourse.code.trim()) {
+      errors.code = 'Course code is required';
+    }
+    
+    if (!newCourse.description.trim()) {
+      errors.description = 'Description is required';
+    }
+    
+    if (!newCourse.instructor) {
+      errors.instructor = 'Instructor is required';
+    }
+    
+    if (!newCourse.schedule.startTime.trim()) {
+      errors.startTime = 'Start time is required';
+    }
+    
+    if (!newCourse.schedule.endTime.trim()) {
+      errors.endTime = 'End time is required';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit the new course
+  const handleCreateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setCreateLoading(true);
+    setCreateError(null);
+    
+    try {
+      await axios.post(
+        `${config.apiUrl}/api/courses`,
+        newCourse,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      setCreateSuccess(true);
+      
+      // Refresh courses list
+      fetchCourses();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setCreateModalOpen(false);
+        setCreateSuccess(false);
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Error creating course:', err);
+      setCreateError(err.response?.data?.message || 'Failed to create course. Please try again.');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -219,17 +510,27 @@ const Courses = () => {
           <Typography variant="h6" component="div" className="font-semibold">
             All Courses
           </Typography>
-          <Tooltip title="Refresh data">
-            <span>
-              <IconButton
-                color="primary"
-                onClick={fetchCourses}
-                disabled={loading}
-              >
-                <RefreshIcon />
-              </IconButton>
-            </span>
-          </Tooltip>
+          <Box display="flex" gap={2}>
+            <Tooltip title="Refresh data">
+              <span>
+                <IconButton
+                  color="primary"
+                  onClick={fetchCourses}
+                  disabled={loading}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenCreateModal}
+            >
+              Create Course
+            </Button>
+          </Box>
         </Box>
 
         {loading ? (
@@ -351,7 +652,7 @@ const Courses = () => {
         onClose={() => setViewModalOpen(false)}
         aria-labelledby="course-details-modal"
       >
-        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
           {selectedCourse && (
             <Card className="shadow-none">
               <CardContent className="p-6">
@@ -460,6 +761,190 @@ const Courses = () => {
               </CardContent>
             </Card>
           )}
+        </div>
+      </Modal>
+
+      {/* Create Course Modal */}
+      <Modal
+        open={createModalOpen}
+        onClose={() => !createLoading && setCreateModalOpen(false)}
+        aria-labelledby="create-course-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 3 }}>
+                <span className='font-semibold text-blue-600'>Create New Course</span>
+              </Typography>
+
+              {createError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{createError}</Alert>
+              )}
+              
+              {createSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>Course created successfully!</Alert>
+              )}
+                
+              <Box component="form" onSubmit={handleCreateCourse} sx={{ mt: 1 }}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Course Name"
+                  name="name"
+                  value={newCourse.name}
+                  onChange={handleNewCourseChange}
+                  error={!!validationErrors.name}
+                  helperText={validationErrors.name}
+                  disabled={createLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Course Code"
+                  name="code"
+                  value={newCourse.code}
+                  onChange={handleNewCourseChange}
+                  error={!!validationErrors.code}
+                  helperText={validationErrors.code}
+                  disabled={createLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Description"
+                  name="description"
+                  multiline
+                  rows={3}
+                  value={newCourse.description}
+                  onChange={handleNewCourseChange}
+                  error={!!validationErrors.description}
+                  helperText={validationErrors.description}
+                  disabled={createLoading}
+                />
+
+                <FormControl 
+                  fullWidth 
+                  margin="normal"
+                  error={!!validationErrors.instructor}
+                  disabled={createLoading || loadingInstructors}
+                >
+                  <InputLabel id="instructor-select-label">Instructor</InputLabel>
+                  <Select
+                    labelId="instructor-select-label"
+                    name="instructor"
+                    value={newCourse.instructor}
+                    label="Instructor"
+                    onChange={handleNewCourseChange as (event: SelectChangeEvent) => void}
+                    startAdornment={
+                      loadingInstructors ? (
+                        <InputAdornment position="start">
+                          <CircularProgress size={20} />
+                        </InputAdornment>
+                      ) : null
+                    }
+                  >
+                    {instructors.map(instructor => (
+                      <MenuItem key={instructor._id} value={instructor._id}>
+                        {instructor.name} ({instructor.email})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {validationErrors.instructor && (
+                    <FormHelperText>{validationErrors.instructor}</FormHelperText>
+                  )}
+                </FormControl>
+
+                <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+                  Schedule
+                </Typography>
+
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="day-select-label">Day</InputLabel>
+                  <Select
+                    labelId="day-select-label"
+                    name="day"
+                    value={newCourse.schedule.day}
+                    label="Day"
+                    onChange={handleNewCourseChange as (event: SelectChangeEvent) => void}
+                    disabled={createLoading}
+                  >
+                    {daysOfWeek.map(day => (
+                      <MenuItem key={day} value={day}>{day}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box display="flex" gap={2} mt={2}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DemoContainer components={['TimePicker']}>
+                      <TimePicker
+                        label="Start Time"
+                        value={parseTimeToDayjs(newCourse.schedule.startTime)}
+                        onChange={(newValue) => handleNewCourseChange(newValue, 'startTime')}
+                        slotProps={{ 
+                          textField: { 
+                            fullWidth: true,
+                            required: true,
+                            error: !!validationErrors.startTime,
+                            helperText: validationErrors.startTime,
+                            disabled: createLoading
+                          } 
+                        }}
+                      />
+                    </DemoContainer>
+                  </LocalizationProvider>
+                  
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DemoContainer components={['TimePicker']}>
+                      <TimePicker
+                        label="End Time"
+                        value={parseTimeToDayjs(newCourse.schedule.endTime)}
+                        onChange={(newValue) => handleNewCourseChange(newValue, 'endTime')}
+                        slotProps={{ 
+                          textField: { 
+                            fullWidth: true,
+                            required: true,
+                            error: !!validationErrors.endTime,
+                            helperText: validationErrors.endTime,
+                            disabled: createLoading
+                          } 
+                        }}
+                      />
+                    </DemoContainer>
+                  </LocalizationProvider>
+                </Box>
+
+                {createLoading && (
+                  <Box sx={{ width: '100%', mt: 2 }}>
+                    <LinearProgress />
+                  </Box>
+                )}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                  <Button 
+                    onClick={() => setCreateModalOpen(false)} 
+                    variant="outlined"
+                    disabled={createLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    variant="contained"
+                    color="primary"
+                    disabled={createLoading || createSuccess}
+                  >
+                    {createLoading ? 'Creating...' : 'Create Course'}
+                  </Button>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
         </div>
       </Modal>
     </motion.div>
