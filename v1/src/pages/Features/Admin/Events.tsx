@@ -53,6 +53,7 @@ import {
   Clear as ClearIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 
 // Define Event interface
@@ -74,6 +75,15 @@ interface Event {
 
 // New interface for creating an event
 interface NewEvent {
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  organizer: string;
+}
+
+// New interface for editing an event
+interface EditEvent {
   title: string;
   description: string;
   date: string;
@@ -142,6 +152,27 @@ const Events = () => {
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
+
+  // State for editing events
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
+  const [editEvent, setEditEvent] = useState<EditEvent>({
+    title: '',
+    description: '',
+    date: '',
+    location: '',
+    organizer: '',
+  });
+  const [editValidationErrors, setEditValidationErrors] = useState<{
+    title?: string;
+    description?: string;
+    date?: string;
+    location?: string;
+    organizer?: string;
+  }>({});
+  const [editLoading, setEditLoading] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<boolean>(false);
 
   // Fetch events function
   const fetchEvents = async (showRefreshAnimation = false) => {
@@ -526,6 +557,148 @@ const Events = () => {
     }
   };
 
+  // Handle opening the edit event modal
+  const handleOpenEditModal = (event: Event) => {
+    setEventToEdit(event);
+    setEditModalOpen(true);
+    setEditEvent({
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      location: event.location,
+      organizer: event.organizer._id,
+    });
+    setEditValidationErrors({});
+    setEditError(null);
+    setEditSuccess(false);
+    
+    // Fetch organizers when opening the modal
+    fetchOrganizers();
+  };
+
+  // Handle edit event change
+  const handleEditEventChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }> | null, field?: string) => {
+    // If this is a date change from the DateTimePicker
+    if (field === 'date') {
+      const dateValue = e as dayjs.Dayjs | null;
+      
+      if (dateValue) {
+        // Format date as ISO string
+        const formattedDate = dateValue.toISOString();
+        
+        setEditEvent(prev => ({
+          ...prev,
+          date: formattedDate
+        }));
+        
+        // Clear validation error
+        if (editValidationErrors.date) {
+          setEditValidationErrors(prev => ({
+            ...prev,
+            date: undefined
+          }));
+        }
+      }
+    } 
+    // Otherwise this is a standard input change
+    else if (e && 'target' in e) {
+      const { name, value } = e.target;
+      if (!name) return;
+      
+      setEditEvent(prev => ({
+        ...prev,
+        [name]: value
+      }));
+      
+      // Clear validation error
+      if (editValidationErrors[name as keyof typeof editValidationErrors]) {
+        setEditValidationErrors(prev => ({
+          ...prev,
+          [name]: undefined
+        }));
+      }
+    }
+  };
+
+  // Validate the edit form
+  const validateEditForm = (): boolean => {
+    const errors: {
+      title?: string;
+      description?: string;
+      date?: string;
+      location?: string;
+      organizer?: string;
+    } = {};
+    
+    if (!editEvent.title.trim()) {
+      errors.title = 'Event title is required';
+    }
+    
+    if (!editEvent.description.trim()) {
+      errors.description = 'Description is required';
+    }
+    
+    if (!editEvent.date) {
+      errors.date = 'Date is required';
+    } else {
+      const selectedDate = new Date(editEvent.date);
+      if (isNaN(selectedDate.getTime())) {
+        errors.date = 'Invalid date format';
+      }
+    }
+    
+    if (!editEvent.location.trim()) {
+      errors.location = 'Location is required';
+    }
+    
+    if (!editEvent.organizer) {
+      errors.organizer = 'Organizer is required';
+    }
+    
+    setEditValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit the edited event
+  const handleUpdateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateEditForm() || !eventToEdit) return;
+    
+    setEditLoading(true);
+    setEditError(null);
+    
+    try {
+      await axios.put(
+        `${config.apiUrl}/api/events/${eventToEdit._id}`,
+        editEvent,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      setEditSuccess(true);
+      
+      // Refresh events list
+      fetchEvents();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setEditModalOpen(false);
+        setEventToEdit(null);
+        setEditSuccess(false);
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Error updating event:', err);
+      setEditError(err.response?.data?.message || 'Failed to update event. Please try again.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -725,6 +898,15 @@ const Events = () => {
                                 <VisibilityIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
+                            <Tooltip title="Edit Event">
+                              <IconButton 
+                                size="small" 
+                                color="secondary"
+                                onClick={() => handleOpenEditModal(event)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                             <Tooltip title="Delete Event">
                               <IconButton 
                                 size="small" 
@@ -874,14 +1056,27 @@ const Events = () => {
                 </div>
 
                 <Box mt={4} display="flex" justifyContent="space-between">
-                  <Button 
-                    onClick={() => handleDeleteConfirmation(selectedEvent)}
-                    variant="outlined"
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                  >
-                    Delete Event
-                  </Button>
+                  <Box display="flex" gap={2}>
+                    <Button 
+                      onClick={() => handleDeleteConfirmation(selectedEvent)}
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                    >
+                      Delete Event
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setViewModalOpen(false);
+                        handleOpenEditModal(selectedEvent);
+                      }}
+                      variant="outlined"
+                      color="secondary"
+                      startIcon={<EditIcon />}
+                    >
+                      Edit Event
+                    </Button>
+                  </Box>
                   <Button 
                     onClick={() => setViewModalOpen(false)} 
                     variant="contained"
@@ -1093,6 +1288,149 @@ const Events = () => {
                   </Box>
                 </>
               )}
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+
+      {/* Edit Event Modal */}
+      <Modal
+        open={editModalOpen}
+        onClose={() => !editLoading && setEditModalOpen(false)}
+        aria-labelledby="edit-event-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 3 }}>
+                <span className='font-semibold text-blue-600'>Edit Event</span>
+              </Typography>
+
+              {editError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{editError}</Alert>
+              )}
+              
+              {editSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>Event updated successfully!</Alert>
+              )}
+                
+              <Box component="form" onSubmit={handleUpdateEvent} sx={{ mt: 1 }}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Event Title"
+                  name="title"
+                  value={editEvent.title}
+                  onChange={handleEditEventChange}
+                  error={!!editValidationErrors.title}
+                  helperText={editValidationErrors.title}
+                  disabled={editLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Description"
+                  name="description"
+                  multiline
+                  rows={3}
+                  value={editEvent.description}
+                  onChange={handleEditEventChange}
+                  error={!!editValidationErrors.description}
+                  helperText={editValidationErrors.description}
+                  disabled={editLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Location"
+                  name="location"
+                  value={editEvent.location}
+                  onChange={handleEditEventChange}
+                  error={!!editValidationErrors.location}
+                  helperText={editValidationErrors.location}
+                  disabled={editLoading}
+                />
+
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DemoContainer components={['DateTimePicker']} sx={{ mt: 2 }}>
+                    <DateTimePicker
+                      label="Event Date & Time"
+                      value={dayjs(editEvent.date)}
+                      onChange={(newValue) => handleEditEventChange(newValue, 'date')}
+                      slotProps={{ 
+                        textField: { 
+                          fullWidth: true,
+                          required: true,
+                          error: !!editValidationErrors.date,
+                          helperText: editValidationErrors.date,
+                          disabled: editLoading
+                        } 
+                      }}
+                    />
+                  </DemoContainer>
+                </LocalizationProvider>
+
+                <FormControl 
+                  fullWidth 
+                  margin="normal"
+                  error={!!editValidationErrors.organizer}
+                  disabled={editLoading || loadingOrganizers}
+                >
+                  <InputLabel id="edit-organizer-select-label">Organizer</InputLabel>
+                  <Select
+                    labelId="edit-organizer-select-label"
+                    name="organizer"
+                    value={editEvent.organizer}
+                    label="Organizer"
+                    onChange={handleEditEventChange as (event: SelectChangeEvent) => void}
+                    startAdornment={
+                      loadingOrganizers ? (
+                        <InputAdornment position="start">
+                          <CircularProgress size={20} />
+                        </InputAdornment>
+                      ) : null
+                    }
+                  >
+                    {organizers.map(organizer => (
+                      <MenuItem key={organizer._id} value={organizer._id}>
+                        {organizer.name} ({organizer.email})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {editValidationErrors.organizer && (
+                    <FormHelperText>{editValidationErrors.organizer}</FormHelperText>
+                  )}
+                </FormControl>
+
+                {editLoading && (
+                  <Box sx={{ width: '100%', mt: 2 }}>
+                    <LinearProgress />
+                  </Box>
+                )}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                  <Button 
+                    onClick={() => setEditModalOpen(false)} 
+                    variant="outlined"
+                    disabled={editLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    variant="contained"
+                    color="primary"
+                    disabled={editLoading || editSuccess}
+                  >
+                    {editLoading ? 'Updating...' : 'Update Event'}
+                  </Button>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
         </div>
