@@ -52,6 +52,7 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 
 // Define Event interface
@@ -134,6 +135,13 @@ const Events = () => {
   // State for organizers (users)
   const [organizers, setOrganizers] = useState<{_id: string, name: string, email: string}[]>([]);
   const [loadingOrganizers, setLoadingOrganizers] = useState<boolean>(false);
+
+  // State for delete confirmation
+  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
 
   // Fetch events function
   const fetchEvents = async (showRefreshAnimation = false) => {
@@ -476,6 +484,48 @@ const Events = () => {
     }
   };
 
+  // Function to handle delete confirmation
+  const handleDeleteConfirmation = (event: Event) => {
+    setEventToDelete(event);
+    setDeleteModalOpen(true);
+    setDeleteError(null);
+    setDeleteSuccess(false);
+  };
+
+  // Function to delete event
+  const handleDeleteEvent = async () => {
+    if (!eventToDelete) return;
+    
+    setDeleteLoading(true);
+    setDeleteError(null);
+    
+    try {
+      await axios.delete(`${config.apiUrl}/api/events/${eventToDelete._id}`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`
+        }
+      });
+      
+      setDeleteSuccess(true);
+      
+      // Refresh events list
+      fetchEvents();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setDeleteModalOpen(false);
+        setEventToDelete(null);
+        setDeleteSuccess(false);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Error deleting event:', err);
+      setDeleteError(err.response?.data?.message || 'Failed to delete event. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -665,15 +715,26 @@ const Events = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <Tooltip title="View Details">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => handleViewEvent(event)}
-                            >
-                              <VisibilityIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          <Box display="flex">
+                            <Tooltip title="View Details">
+                              <IconButton 
+                                size="small" 
+                                color="primary"
+                                onClick={() => handleViewEvent(event)}
+                              >
+                                <VisibilityIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete Event">
+                              <IconButton 
+                                size="small" 
+                                color="error"
+                                onClick={() => handleDeleteConfirmation(event)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
@@ -812,7 +873,15 @@ const Events = () => {
                   </div>
                 </div>
 
-                <Box mt={4} display="flex" justifyContent="flex-end">
+                <Box mt={4} display="flex" justifyContent="space-between">
+                  <Button 
+                    onClick={() => handleDeleteConfirmation(selectedEvent)}
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                  >
+                    Delete Event
+                  </Button>
                   <Button 
                     onClick={() => setViewModalOpen(false)} 
                     variant="contained"
@@ -964,6 +1033,66 @@ const Events = () => {
                   </Button>
                 </Box>
               </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => !deleteLoading && setDeleteModalOpen(false)}
+        aria-labelledby="delete-event-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 2 }} color="error">
+                Delete Event
+              </Typography>
+              
+              {deleteError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>
+              )}
+              
+              {deleteSuccess ? (
+                <Alert severity="success" sx={{ mb: 2 }}>Event deleted successfully!</Alert>
+              ) : (
+                <>
+                  <Typography variant="body1" sx={{ mb: 3 }}>
+                    Are you sure you want to delete the event <strong>{eventToDelete?.title}</strong>?
+                    This action cannot be undone.
+                  </Typography>
+                  
+                  {eventToDelete && eventToDelete.attendeesCount > 0 && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      Warning: This event has {eventToDelete.attendeesCount} registered attendees who will be affected.
+                    </Alert>
+                  )}
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+                    <Button 
+                      onClick={() => setDeleteModalOpen(false)} 
+                      variant="outlined"
+                      disabled={deleteLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <button 
+                      onClick={handleDeleteEvent}
+                      disabled={deleteLoading}
+                      className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deleteLoading ? (
+                        <CircularProgress size={20} color="inherit" />
+                      ) : (
+                        <DeleteIcon fontSize="small" />
+                      )}
+                      <span>{deleteLoading ? 'Deleting...' : 'Delete Event'}</span>
+                    </button>
+                  </Box>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
