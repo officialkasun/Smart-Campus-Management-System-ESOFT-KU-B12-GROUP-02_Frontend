@@ -9,7 +9,6 @@ lerna-debug.log*
 
 node_modules
 dist
-src/pages/Features/Lecturer
 dist-ssr
 *.local
 .env
@@ -24,3 +23,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Additional ignored folder
+src/pages/Features/Lecturer
