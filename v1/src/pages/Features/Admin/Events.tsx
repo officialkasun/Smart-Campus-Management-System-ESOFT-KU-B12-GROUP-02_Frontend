@@ -931,3 +931,45 @@ const Events = () => {
                   >
                     {organizers.map(organizer => (
                       <MenuItem key={organizer._id} value={organizer._id}>
+                        {organizer.name} ({organizer.email})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {validationErrors.organizer && (
+                    <FormHelperText>{validationErrors.organizer}</FormHelperText>
+                  )}
+                </FormControl>
+
+                {createLoading && (
+                  <Box sx={{ width: '100%', mt: 2 }}>
+                    <LinearProgress />
+                  </Box>
+                )}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                  <Button 
+                    onClick={() => setCreateModalOpen(false)} 
+                    variant="outlined"
+                    disabled={createLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    variant="contained"
+                    color="primary"
+                    disabled={createLoading || createSuccess}
+                  >
+                    {createLoading ? 'Creating...' : 'Create Event'}
+                  </Button>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+    </motion.div>
+  );
+};
+
+export default Events;
