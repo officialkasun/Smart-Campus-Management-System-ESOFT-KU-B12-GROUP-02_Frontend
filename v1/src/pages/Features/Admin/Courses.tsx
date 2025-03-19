@@ -52,6 +52,7 @@ import {
   Schedule as ScheduleIcon,
   Group as GroupIcon,
   Add as AddIcon,
+  Delete as DeleteIcon,
 } from '@mui/icons-material';
 
 // Define course interface
@@ -139,6 +140,13 @@ const Courses = () => {
   // State for instructors (lecturers)
   const [instructors, setInstructors] = useState<{_id: string, name: string, email: string}[]>([]);
   const [loadingInstructors, setLoadingInstructors] = useState<boolean>(false);
+
+  // State for delete confirmation
+  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -494,6 +502,48 @@ const Courses = () => {
     }
   };
 
+  // Function to handle delete confirmation
+  const handleDeleteConfirmation = (course: Course) => {
+    setCourseToDelete(course);
+    setDeleteModalOpen(true);
+    setDeleteError(null);
+    setDeleteSuccess(false);
+  };
+
+  // Function to delete course
+  const handleDeleteCourse = async () => {
+    if (!courseToDelete) return;
+    
+    setDeleteLoading(true);
+    setDeleteError(null);
+    
+    try {
+      await axios.delete(`${config.apiUrl}/api/courses/${courseToDelete._id}`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`
+        }
+      });
+      
+      setDeleteSuccess(true);
+      
+      // Refresh courses list
+      fetchCourses();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setDeleteModalOpen(false);
+        setCourseToDelete(null);
+        setDeleteSuccess(false);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Error deleting course:', err);
+      setDeleteError(err.response?.data?.message || 'Failed to delete course. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -616,13 +666,22 @@ const Courses = () => {
                         </TableCell>
                         <TableCell><span className='dark:text-white text-black'>{new Date(course.createdAt).toLocaleDateString()}</span></TableCell>
                         <TableCell>
-                          <IconButton 
-                            size="small" 
-                            color="primary"
-                            onClick={() => handleViewCourse(course)}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
+                          <Box display="flex">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => handleViewCourse(course)}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={() => handleDeleteConfirmation(course)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
@@ -756,7 +815,14 @@ const Courses = () => {
                   </div>
                 </div>
 
-                <Box mt={4} display="flex" justifyContent="flex-end">
+                <Box mt={4} display="flex" justifyContent="space-between">
+                  <button 
+                    onClick={() => handleDeleteConfirmation(selectedCourse)}
+                    className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700 transition-colors"
+                  >
+                    <DeleteIcon fontSize="small" />
+                    <span>Delete Course</span>
+                  </button>
                   <Button 
                     onClick={() => setViewModalOpen(false)} 
                     variant="contained"
@@ -949,6 +1015,66 @@ const Courses = () => {
                   </Button>
                 </Box>
               </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => !deleteLoading && setDeleteModalOpen(false)}
+        aria-labelledby="delete-course-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 2 }} color="error">
+                Delete Course
+              </Typography>
+              
+              {deleteError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>
+              )}
+              
+              {deleteSuccess ? (
+                <Alert severity="success" sx={{ mb: 2 }}>Course deleted successfully!</Alert>
+              ) : (
+                <>
+                  <Typography variant="body1" sx={{ mb: 3 }}>
+                    Are you sure you want to delete the course <strong>{courseToDelete?.name}</strong> ({courseToDelete?.code})?
+                    This action cannot be undone.
+                  </Typography>
+                  
+                  {courseToDelete?.students.length > 0 && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      Warning: This course has {courseToDelete.students.length} enrolled students.
+                    </Alert>
+                  )}
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+                    <Button 
+                      onClick={() => setDeleteModalOpen(false)} 
+                      variant="outlined"
+                      disabled={deleteLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <button 
+                      onClick={handleDeleteCourse}
+                      disabled={deleteLoading}
+                      className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deleteLoading ? (
+                        <CircularProgress size={20} color="inherit" />
+                      ) : (
+                        <DeleteIcon fontSize="small" />
+                      )}
+                      <span>{deleteLoading ? 'Deleting...' : 'Delete Course'}</span>
+                    </button>
+                  </Box>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
