@@ -35,7 +35,9 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  LinearProgress
+  LinearProgress,
+  InputAdornment,
+  Tooltip
 } from '@mui/material';
 import { 
   Visibility as VisibilityIcon,
@@ -46,7 +48,10 @@ import {
   Badge as BadgeIcon,
   School as SchoolIcon,
   AccessTime as AccessTimeIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 
 interface User {
@@ -101,8 +106,23 @@ const Users = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  // New state variables for search functionality
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+
+  // New state for tracking last refresh time
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  const fetchUsers = async (showRefreshAnimation = false) => {
+    if (showRefreshAnimation) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
       const response = await axios.get(`${config.apiUrl}/api/users`, {
         headers: {
@@ -111,11 +131,26 @@ const Users = () => {
       });
       setUsers(response.data);
       setError(null);
+      
+      // Update last refresh time
+      setLastRefreshTime(new Date());
+      
+      // Reset search state if this is a manual refresh
+      if (showRefreshAnimation && searchPerformed) {
+        setSearchPerformed(false);
+        setSearchQuery('');
+        setSearchError(null);
+      }
+      
     } catch (err: any) {
       console.error('Error fetching users :', err);
       setError(err.response?.data?.message || 'Failed to collect user details.');
     } finally {
-      setLoading(false);
+      if (showRefreshAnimation) {
+        setTimeout(() => setRefreshing(false), 500); // Show refresh animation for at least 500ms
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -323,6 +358,84 @@ const Users = () => {
     }
   };
 
+  // Search user by ID
+  const searchUserById = async () => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, reset to show all users
+      setSearchPerformed(false);
+      fetchUsers();
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+
+    // Make API request to search user by ID
+    try { 
+      const response = await axios.get(
+        `${config.apiUrl}/api/users/${searchQuery.trim()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      // If successful, update users state with the single user
+      if (response.data) {
+        setUsers([response.data]);
+      } else {
+        setUsers([]);
+      }
+      setError(null);
+    } catch (err: any) {
+      console.error('Error searching user:', err);
+      setSearchError('User not found with the provided ID');
+      setUsers([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Handle search form submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    searchUserById();
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // Clear search error when input changes
+    if (searchError) {
+      setSearchError(null);
+    }
+  };
+
+  // Clear search and show all users again
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchError(null);
+    setSearchPerformed(false);
+    fetchUsers();
+  };
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    fetchUsers(true);
+  };
+
+  // Format the refresh time in a readable format
+  const formatRefreshTime = (date: Date) => {
+    return date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      hour12: true 
+    });
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -338,25 +451,100 @@ const Users = () => {
         User Management
       </Typography>
 
-      {error && <Alert severity="error" className="mb-4">{error}</Alert>}
+      {error && !searchError && <Alert severity="error" className="mb-4">{error}</Alert>}
+
+      <Paper className="shadow-lg mb-4">
+        <Box p={2}>
+          <form onSubmit={handleSearchSubmit}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search user by ID..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear search"
+                      onClick={handleClearSearch}
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
+              {searchError && (
+                <Typography color="error" variant="body2">
+                  {searchError}
+                </Typography>
+              )}
+              {searchPerformed && !searchError && users.length > 0 && (
+                <Typography variant="body2" color="primary">
+                  User found
+                </Typography>
+              )}
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={searchLoading || !searchQuery.trim()}
+                className="ml-auto"
+                startIcon={searchLoading ? <CircularProgress size={20} /> : <SearchIcon />}
+              >
+                {searchLoading ? 'Searching...' : 'Search'}
+              </Button>
+            </Box>
+          </form>
+        </Box>
+      </Paper>
 
       <Paper className="shadow-lg">
         <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" component="div" className="font-semibold">
-            All Users
-          </Typography>
-          <Button 
-            variant="contained" 
-            color="primary"
-            startIcon={<AddIcon />}
-            className="bg-blue-600 hover:bg-blue-700"
-            onClick={handleOpenAddModal}
-          >
-            Add New User
-          </Button>
+          <Box>
+            <Typography variant="h6" component="div" className="font-semibold">
+              {searchPerformed ? 'Search Results' : 'All Users'}
+            </Typography>
+            {!searchPerformed && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Last updated: {formatRefreshTime(lastRefreshTime)}
+              </Typography>
+            )}
+          </Box>
+          <Box display="flex" gap={2}>
+            <Tooltip title="Refresh data">
+              <span>
+                <IconButton 
+                  color="primary" 
+                  onClick={handleRefresh}
+                  disabled={refreshing || loading}
+                  className={refreshing ? 'animate-spin' : ''}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Button 
+              variant="contained" 
+              color="primary"
+              startIcon={<AddIcon />}
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleOpenAddModal}
+            >
+              Add New User
+            </Button>
+          </Box>
         </Box>
 
-        {loading ? (
+        {(loading || searchLoading || refreshing) ? (
           <Box p={4} display="flex" justifyContent="center">
             <CircularProgress />
           </Box>
@@ -422,7 +610,9 @@ const Users = () => {
                   <TableRow>
                     <TableCell colSpan={6} align="center" className="py-8">
                       <Typography variant="body1" color="textSecondary">
-                        No users found
+                        {searchPerformed 
+                          ? "No users found matching your search" 
+                          : "No users found"}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -437,7 +627,7 @@ const Users = () => {
           component="div"
           count={users.length}
           rowsPerPage={rowsPerPage}
-          page={page}
+          page={users.length <= page * rowsPerPage ? 0 : page}
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
