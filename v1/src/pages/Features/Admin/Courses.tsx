@@ -53,6 +53,7 @@ import {
   Group as GroupIcon,
   Add as AddIcon,
   Delete as DeleteIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 
 // Define course interface
@@ -77,6 +78,19 @@ interface Course {
 
 // New interface for creating a course
 interface NewCourse {
+  name: string;
+  code: string;
+  description: string;
+  instructor: string;
+  schedule: {
+    day: string;
+    startTime: string;
+    endTime: string;
+  };
+}
+
+// New interface for editing a course
+interface EditCourse {
   name: string;
   code: string;
   description: string;
@@ -147,6 +161,32 @@ const Courses = () => {
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
+
+  // New state for editing courses
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+  const [editCourse, setEditCourse] = useState<EditCourse>({
+    name: '',
+    code: '',
+    description: '',
+    instructor: '',
+    schedule: {
+      day: 'Monday',
+      startTime: '',
+      endTime: '',
+    },
+  });
+  const [editValidationErrors, setEditValidationErrors] = useState<{
+    name?: string;
+    code?: string;
+    description?: string;
+    instructor?: string;
+    startTime?: string;
+    endTime?: string;
+  }>({});
+  const [editLoading, setEditLoading] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<boolean>(false);
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -544,6 +584,178 @@ const Courses = () => {
     }
   };
 
+  // Handle opening the edit course modal
+  const handleOpenEditModal = (course: Course) => {
+    setCourseToEdit(course);
+    setEditModalOpen(true);
+    setEditCourse({
+      name: course.name,
+      code: course.code,
+      description: course.description,
+      instructor: course.instructor._id, // Ensure we're using the ID, not the full object
+      schedule: {
+        day: course.schedule.day,
+        startTime: course.schedule.startTime,
+        endTime: course.schedule.endTime,
+      },
+    });
+    setEditValidationErrors({});
+    setEditError(null);
+    setEditSuccess(false);
+    
+    // Fetch instructors when opening the modal
+    fetchInstructors();
+  };
+
+  // Handle edit course form changes
+  const handleEditCourseChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }> | null, field?: string) => {
+    // If this is a time change from the TimePicker
+    if (field === 'startTime' || field === 'endTime') {
+      const timeValue = e as dayjs.Dayjs | null;
+      
+      if (timeValue) {
+        // Format time as HH:MM AM/PM
+        const formattedTime = timeValue.format('h:mm A');
+        
+        setEditCourse(prev => ({
+          ...prev,
+          schedule: {
+            ...prev.schedule,
+            [field]: formattedTime
+          }
+        }));
+        
+        // Clear validation error
+        if (editValidationErrors[field as 'startTime' | 'endTime']) {
+          setEditValidationErrors(prev => ({
+            ...prev,
+            [field]: undefined
+          }));
+        }
+      }
+    } 
+    // Otherwise this is a standard input change
+    else if (e && 'target' in e) {
+      const { name, value } = e.target;
+      if (!name) return;
+      
+      if (name === 'day') {
+        setEditCourse(prev => ({
+          ...prev,
+          schedule: {
+            ...prev.schedule,
+            [name]: value
+          }
+        }));
+      } else {
+        setEditCourse(prev => ({
+          ...prev,
+          [name]: value
+        }));
+        
+        // Clear validation error
+        if (editValidationErrors[name as keyof typeof editValidationErrors]) {
+          setEditValidationErrors(prev => ({
+            ...prev,
+            [name]: undefined
+          }));
+        }
+      }
+    }
+  };
+
+  // Validate the edit form
+  const validateEditForm = (): boolean => {
+    const errors: {
+      name?: string;
+      code?: string;
+      description?: string;
+      instructor?: string;
+      startTime?: string;
+      endTime?: string;
+    } = {};
+    
+    if (!editCourse.name.trim()) {
+      errors.name = 'Course name is required';
+    }
+    
+    if (!editCourse.code.trim()) {
+      errors.code = 'Course code is required';
+    }
+    
+    if (!editCourse.description.trim()) {
+      errors.description = 'Description is required';
+    }
+    
+    if (!editCourse.instructor) {
+      errors.instructor = 'Instructor is required';
+    }
+    
+    if (!editCourse.schedule.startTime.trim()) {
+      errors.startTime = 'Start time is required';
+    }
+    
+    if (!editCourse.schedule.endTime.trim()) {
+      errors.endTime = 'End time is required';
+    }
+    
+    setEditValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit the edited course
+  const handleUpdateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateEditForm() || !courseToEdit) return;
+    
+    setEditLoading(true);
+    setEditError(null);
+    
+    // Create a clean payload for the API
+    const updatePayload = {
+      name: editCourse.name,
+      code: editCourse.code,
+      description: editCourse.description,
+      instructor: editCourse.instructor, // This should be just the ID
+      schedule: {
+        day: editCourse.schedule.day,
+        startTime: editCourse.schedule.startTime,
+        endTime: editCourse.schedule.endTime,
+      },
+    };
+    
+    try {
+      await axios.put(
+        `${config.apiUrl}/api/courses/${courseToEdit._id}`,
+        updatePayload,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      setEditSuccess(true);
+      
+      // Refresh courses list
+      fetchCourses();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setEditModalOpen(false);
+        setCourseToEdit(null);
+        setEditSuccess(false);
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Error updating course:', err);
+      setEditError(err.response?.data?.message || 'Failed to update course. Please try again.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -673,6 +885,13 @@ const Courses = () => {
                               onClick={() => handleViewCourse(course)}
                             >
                               <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton 
+                              size="small" 
+                              color="secondary"
+                              onClick={() => handleOpenEditModal(course)}
+                            >
+                              <EditIcon fontSize="small" />
                             </IconButton>
                             <IconButton 
                               size="small" 
@@ -816,13 +1035,25 @@ const Courses = () => {
                 </div>
 
                 <Box mt={4} display="flex" justifyContent="space-between">
-                  <button 
-                    onClick={() => handleDeleteConfirmation(selectedCourse)}
-                    className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700 transition-colors"
-                  >
-                    <DeleteIcon fontSize="small" />
-                    <span>Delete Course</span>
-                  </button>
+                  <Box display="flex" gap={2}>
+                    <button 
+                      onClick={() => handleDeleteConfirmation(selectedCourse)}
+                      className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700 transition-colors"
+                    >
+                      <DeleteIcon fontSize="small" />
+                      <span>Delete Course</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setViewModalOpen(false);
+                        handleOpenEditModal(selectedCourse);
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-blue-700 transition-colors"
+                    >
+                      <EditIcon fontSize="small" />
+                      <span>Edit Course</span>
+                    </button>
+                  </Box>
                   <Button 
                     onClick={() => setViewModalOpen(false)} 
                     variant="contained"
@@ -1012,6 +1243,190 @@ const Courses = () => {
                     disabled={createLoading || createSuccess}
                   >
                     {createLoading ? 'Creating...' : 'Create Course'}
+                  </Button>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+
+      {/* Edit Course Modal */}
+      <Modal
+        open={editModalOpen}
+        onClose={() => !editLoading && setEditModalOpen(false)}
+        aria-labelledby="edit-course-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 3 }}>
+                <span className='font-semibold text-blue-600'>Edit Course</span>
+              </Typography>
+
+              {editError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{editError}</Alert>
+              )}
+              
+              {editSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>Course updated successfully!</Alert>
+              )}
+                
+              <Box component="form" onSubmit={handleUpdateCourse} sx={{ mt: 1 }}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Course Name"
+                  name="name"
+                  value={editCourse.name}
+                  onChange={handleEditCourseChange}
+                  error={!!editValidationErrors.name}
+                  helperText={editValidationErrors.name}
+                  disabled={editLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Course Code"
+                  name="code"
+                  value={editCourse.code}
+                  onChange={handleEditCourseChange}
+                  error={!!editValidationErrors.code}
+                  helperText={editValidationErrors.code}
+                  disabled={editLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Description"
+                  name="description"
+                  multiline
+                  rows={3}
+                  value={editCourse.description}
+                  onChange={handleEditCourseChange}
+                  error={!!editValidationErrors.description}
+                  helperText={editValidationErrors.description}
+                  disabled={editLoading}
+                />
+
+                <FormControl 
+                  fullWidth 
+                  margin="normal"
+                  error={!!editValidationErrors.instructor}
+                  disabled={editLoading || loadingInstructors}
+                >
+                  <InputLabel id="edit-instructor-select-label">Instructor</InputLabel>
+                  <Select
+                    labelId="edit-instructor-select-label"
+                    name="instructor"
+                    value={editCourse.instructor}
+                    label="Instructor"
+                    onChange={handleEditCourseChange as (event: SelectChangeEvent) => void}
+                    startAdornment={
+                      loadingInstructors ? (
+                        <InputAdornment position="start">
+                          <CircularProgress size={20} />
+                        </InputAdornment>
+                      ) : null
+                    }
+                  >
+                    {instructors.map(instructor => (
+                      <MenuItem key={instructor._id} value={instructor._id}>
+                        {instructor.name} ({instructor.email})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {editValidationErrors.instructor && (
+                    <FormHelperText>{editValidationErrors.instructor}</FormHelperText>
+                  )}
+                </FormControl>
+
+                <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+                  Schedule
+                </Typography>
+
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="edit-day-select-label">Day</InputLabel>
+                  <Select
+                    labelId="edit-day-select-label"
+                    name="day"
+                    value={editCourse.schedule.day}
+                    label="Day"
+                    onChange={handleEditCourseChange as (event: SelectChangeEvent) => void}
+                    disabled={editLoading}
+                  >
+                    {daysOfWeek.map(day => (
+                      <MenuItem key={day} value={day}>{day}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box display="flex" gap={2} mt={2}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DemoContainer components={['TimePicker']}>
+                      <TimePicker
+                        label="Start Time"
+                        value={parseTimeToDayjs(editCourse.schedule.startTime)}
+                        onChange={(newValue) => handleEditCourseChange(newValue, 'startTime')}
+                        slotProps={{ 
+                          textField: { 
+                            fullWidth: true,
+                            required: true,
+                            error: !!editValidationErrors.startTime,
+                            helperText: editValidationErrors.startTime,
+                            disabled: editLoading
+                          } 
+                        }}
+                      />
+                    </DemoContainer>
+                  </LocalizationProvider>
+                  
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DemoContainer components={['TimePicker']}>
+                      <TimePicker
+                        label="End Time"
+                        value={parseTimeToDayjs(editCourse.schedule.endTime)}
+                        onChange={(newValue) => handleEditCourseChange(newValue, 'endTime')}
+                        slotProps={{ 
+                          textField: { 
+                            fullWidth: true,
+                            required: true,
+                            error: !!editValidationErrors.endTime,
+                            helperText: editValidationErrors.endTime,
+                            disabled: editLoading
+                          } 
+                        }}
+                      />
+                    </DemoContainer>
+                  </LocalizationProvider>
+                </Box>
+
+                {editLoading && (
+                  <Box sx={{ width: '100%', mt: 2 }}>
+                    <LinearProgress />
+                  </Box>
+                )}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                  <Button 
+                    onClick={() => setEditModalOpen(false)} 
+                    variant="outlined"
+                    disabled={editLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    variant="contained"
+                    color="primary"
+                    disabled={editLoading || editSuccess}
+                  >
+                    {editLoading ? 'Updating...' : 'Update Course'}
                   </Button>
                 </Box>
               </Box>
