@@ -104,6 +104,18 @@ const Resources = () => {
     type: 'classroom',
   });
 
+  // State for edit resource modal
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [editResource, setEditResource] = useState({
+    _id: '',
+    name: '',
+    type: 'classroom',
+  });
+
+  // Add state for success messages
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
   // Fetch resources function
   const fetchResources = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
@@ -200,6 +212,59 @@ const Resources = () => {
   const handleViewResource = (resource: Resource) => {
     setSelectedResource(resource);
     setViewModalOpen(true);
+  };
+
+  // Function to handle editing a resource
+  const handleEditResource = (resource: Resource) => {
+    setEditResource({
+      _id: resource._id,
+      name: resource.name,
+      type: resource.type,
+    });
+    setEditModalOpen(true);
+  };
+
+  // Handle input change for edit resource
+  const handleEditResourceChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+    const { name, value } = e.target;
+    setEditResource((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle edit resource submission
+  const handleUpdateResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpdateError(null);
+    try {
+      const response = await axios.put(`${config.apiUrl}/api/resources/${editResource._id}`, {
+        name: editResource.name,
+        type: editResource.type,
+      }, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      
+      // Update resources array with the updated resource
+      setResources(resources.map(resource => 
+        resource._id === editResource._id ? response.data : resource
+      ));
+      
+      // Show success message
+      setSuccessMessage('Resource updated successfully!');
+      
+      // Clear any existing errors
+      setError(null);
+      setUpdateError(null);
+      
+      // Close modal after a short delay to show the success message
+      setTimeout(() => {
+        setEditModalOpen(false);
+        setSuccessMessage(null);
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error updating resource:', err);
+      setUpdateError(err.response?.data?.message || 'Failed to update resource.');
+    }
   };
 
   // Handle refresh button click
@@ -314,6 +379,7 @@ const Resources = () => {
   // Handle add resource submission
   const handleAddResource = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUpdateError(null);
     try {
       const response = await axios.post(`${config.apiUrl}/api/resources`, newResource, {
         headers: {
@@ -321,11 +387,22 @@ const Resources = () => {
         },
       });
       setResources((prev) => [...prev, response.data]);
-      setAddModalOpen(false);
-      setNewResource({ name: '', type: 'classroom' });
+      
+      // Show success message
+      setSuccessMessage('Resource added successfully!');
+      
+      // Clear any existing errors
+      setError(null);
+      
+      // Close modal after a short delay to show the success message
+      setTimeout(() => {
+        setAddModalOpen(false);
+        setSuccessMessage(null);
+        setNewResource({ name: '', type: 'classroom' });
+      }, 1500);
     } catch (err: any) {
       console.error('Error adding resource:', err);
-      setError(err.response?.data?.message || 'Failed to add resource.');
+      setUpdateError(err.response?.data?.message || 'Failed to add resource.');
     }
   };
 
@@ -583,6 +660,7 @@ const Resources = () => {
                             <IconButton 
                               size="small" 
                               color="secondary"
+                              onClick={() => handleEditResource(resource)}
                             >
                               <EditIcon fontSize="small" />
                             </IconButton>
@@ -757,6 +835,19 @@ const Resources = () => {
           <Typography variant="h6" className="font-bold mb-4">
             Add New Resource
           </Typography>
+          
+          {successMessage && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'success.light', borderRadius: 1 }}>
+              <Typography color="success.contrastText">{successMessage}</Typography>
+            </Box>
+          )}
+          
+          {updateError && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+              <Typography color="error.contrastText">{updateError}</Typography>
+            </Box>
+          )}
+          
           <form onSubmit={handleAddResource}>
             <TextField
               fullWidth
@@ -784,11 +875,102 @@ const Resources = () => {
               </Select>
             </FormControl>
             <Box mt={2} display="flex" justifyContent="flex-end">
-              <Button onClick={() => setAddModalOpen(false)} variant="outlined" color="secondary" sx={{ mr: 2 }}>
+              <Button 
+                onClick={() => {
+                  setAddModalOpen(false);
+                  setUpdateError(null);
+                  setSuccessMessage(null);
+                }} 
+                variant="outlined" 
+                color="secondary" 
+                sx={{ mr: 2 }}
+                disabled={!!successMessage}
+              >
                 Cancel
               </Button>
-              <Button type="submit" variant="contained" color="primary">
+              <Button 
+                type="submit" 
+                variant="contained" 
+                color="primary"
+                disabled={!!successMessage}
+              >
                 Add
+              </Button>
+            </Box>
+          </form>
+        </div>
+      </Modal>
+
+      {/* Edit Resource Modal */}
+      <Modal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        aria-labelledby="edit-resource-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <Typography variant="h6" className="font-bold mb-4">
+            Edit Resource
+          </Typography>
+          
+          {successMessage && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'success.light', borderRadius: 1 }}>
+              <Typography color="success.contrastText">{successMessage}</Typography>
+            </Box>
+          )}
+          
+          {updateError && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+              <Typography color="error.contrastText">{updateError}</Typography>
+            </Box>
+          )}
+          
+          <form onSubmit={handleUpdateResource}>
+            <TextField
+              fullWidth
+              label="Resource Name"
+              name="name"s
+              value={editResource.name}
+              onChange={handleEditResourceChange}
+              variant="outlined"
+              margin="normal"
+              required
+            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel id="edit-resource-type-label">Type</InputLabel>
+              <Select
+                labelId="edit-resource-type-label"
+                id="edit-resource-type"
+                name="type"
+                value={editResource.type}
+                onChange={handleEditResourceChange}
+                required
+              >
+                <MenuItem value="classroom">Classroom</MenuItem>
+                <MenuItem value="equipment">Equipment</MenuItem>
+                <MenuItem value="lab">Lab</MenuItem>
+              </Select>
+            </FormControl>
+            <Box mt={2} display="flex" justifyContent="flex-end">
+              <Button 
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setUpdateError(null);
+                  setSuccessMessage(null);
+                }} 
+                variant="outlined" 
+                color="secondary" 
+                sx={{ mr: 2 }}
+                disabled={!!successMessage}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                variant="contained" 
+                color="primary"
+                disabled={!!successMessage}
+              >
+                Update
               </Button>
             </Box>
           </form>
