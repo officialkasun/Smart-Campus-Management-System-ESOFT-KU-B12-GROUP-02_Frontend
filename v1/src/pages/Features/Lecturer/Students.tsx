@@ -14,3 +14,21 @@ import {
   School as SchoolIcon, AccessTime as AccessTimeIcon, Search as SearchIcon, Clear as ClearIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
+
+interface User {
+    _id: string;
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    courses: any[];
+    createdAt: string;
+    activityCount: number;
+  }
+  
+  // Define sorting order type
+  type Order = 'asc' | 'desc';
+  
+  // Define sortable fields
+  type SortField = 'id' | 'name' | 'email' | 'createdAt' | null;
+  
