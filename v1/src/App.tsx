@@ -7,7 +7,6 @@ import Error404 from './pages/Public/Error404';
 import { Container } from '@mui/material';
 import Navbar from './components/Navbar';
 import Login from './pages/Auth/Login';
-import Test from './pages/Features/Lecturer/Test';
 import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
