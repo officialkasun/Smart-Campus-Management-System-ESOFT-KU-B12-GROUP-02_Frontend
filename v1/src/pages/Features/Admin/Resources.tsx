@@ -8,6 +8,8 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs from 'dayjs';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import {
   Typography,
   Paper,
@@ -55,7 +57,7 @@ import {
   Event as EventIcon,
 } from '@mui/icons-material';
 
-// Define Resource interface based on actual API response
+// Update the Resource interface to reflect reservedBy can be an object or string
 interface Resource {
   _id: string;
   name: string;
@@ -63,7 +65,7 @@ interface Resource {
   availability: boolean;
   reservationDate: string | null;
   reservationExpiry: string | null;
-  reservedBy: string | null;
+  reservedBy: { _id: string; name: string; email: string } | string | null;
   createdAt: string;
   __v: number;
 }
@@ -130,7 +132,8 @@ const Resources = () => {
   // State for reservation modal
   const [reserveModalOpen, setReserveModalOpen] = useState<boolean>(false);
   const [resourceToReserve, setResourceToReserve] = useState<Resource | null>(null);
-  const [reservationDateTime, setReservationDateTime] = useState<dayjs.Dayjs | null>(dayjs().add(1, 'hour'));
+  const [reservationDate, setReservationDate] = useState<dayjs.Dayjs | null>(dayjs());
+  const [reservationTime, setReservationTime] = useState<dayjs.Dayjs | null>(dayjs().add(1, 'hour'));
   const [reservationLoading, setReservationLoading] = useState<boolean>(false);
   const [reservationError, setReservationError] = useState<string | null>(null);
 
@@ -498,7 +501,8 @@ const Resources = () => {
     }
     
     setResourceToReserve(resource);
-    setReservationDateTime(dayjs().add(1, 'hour')); // Default to 1 hour from now
+    setReservationDate(dayjs()); // Default to today
+    setReservationTime(dayjs().add(1, 'hour')); // Default to 1 hour from now
     setReserveModalOpen(true);
     setReservationError(null);
   };
@@ -507,13 +511,16 @@ const Resources = () => {
   const handleReserveResource = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!resourceToReserve || !reservationDateTime) {
+    if (!resourceToReserve || !reservationDate || !reservationTime) {
       setReservationError("Please select a valid date and time for reservation.");
       return;
     }
     
+    // Create a combined datetime for validation purposes
+    const combinedDateTime = reservationDate.hour(reservationTime.hour()).minute(reservationTime.minute());
+    
     // Ensure the reservation time is in the future
-    if (reservationDateTime.isBefore(dayjs())) {
+    if (combinedDateTime.isBefore(dayjs())) {
       setReservationError("Reservation time must be in the future.");
       return;
     }
@@ -525,7 +532,8 @@ const Resources = () => {
       const response = await axios.post(
         `${config.apiUrl}/api/resources/${resourceToReserve._id}/reserve`, 
         {
-          reservationDate: reservationDateTime.toISOString()
+          reservationDate: reservationDate.format('YYYY-MM-DD'),
+          reservationTime: reservationTime.format('HH:mm')
         }, 
         {
           headers: {
@@ -559,6 +567,18 @@ const Resources = () => {
     } finally {
       setReservationLoading(false);
     }
+  };
+
+  // Add a function to handle displaying reservedBy data safely
+  const formatReservedBy = (reservedBy: Resource['reservedBy']) => {
+    if (!reservedBy) return 'Not specified';
+    
+    if (typeof reservedBy === 'string') {
+      return reservedBy;
+    }
+    
+    // If it's an object, return the name property or a fallback
+    return reservedBy.name || reservedBy.email || 'Unknown user';
   };
 
   return (
@@ -928,7 +948,7 @@ const Resources = () => {
                               Reserved By
                             </Typography>
                             <Typography variant="body1">
-                              {selectedResource.reservedBy}
+                              {formatReservedBy(selectedResource.reservedBy)}
                             </Typography>
                           </div>
                         </div>
@@ -1232,13 +1252,21 @@ const Resources = () => {
               
               <form onSubmit={handleReserveResource}>
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
-                  <DateTimePicker
-                    label="Reservation Date & Time"
-                    value={reservationDateTime}
-                    onChange={(newValue) => setReservationDateTime(newValue)}
-                    disablePast
-                    sx={{ width: '100%', mb: 3 }}
-                  />
+                  <Box mb={3}>
+                    <DatePicker
+                      label="Reservation Date"
+                      value={reservationDate}
+                      onChange={(newValue) => setReservationDate(newValue)}
+                      disablePast
+                      sx={{ width: '100%', mb: 2 }}
+                    />
+                    <TimePicker
+                      label="Reservation Time"
+                      value={reservationTime}
+                      onChange={(newValue) => setReservationTime(newValue)}
+                      sx={{ width: '100%' }}
+                    />
+                  </Box>
                 </LocalizationProvider>
                 
                 <Box display="flex" gap={2} justifyContent="flex-end">
@@ -1254,7 +1282,7 @@ const Resources = () => {
                     type="submit"
                     variant="contained" 
                     color="success"
-                    disabled={reservationLoading || !reservationDateTime}
+                    disabled={reservationLoading || !reservationDate || !reservationTime}
                     startIcon={reservationLoading ? <CircularProgress size={20} color="inherit" /> : <EventIcon />}
                   >
                     {reservationLoading ? "Reserving..." : "Confirm Reservation"}
