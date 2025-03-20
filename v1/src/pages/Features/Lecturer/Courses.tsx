@@ -71,3 +71,58 @@ import {
   Article as TxtIcon,
 } from '@mui/icons-material';
 
+// Define course interface
+interface Course {
+  _id: string;
+  name: string;
+  code: string;
+  description: string;
+  instructor: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  schedule: {
+    day: string;
+    startTime: string;
+    endTime: string;
+  };
+  students: string[];
+  lectureMaterials: string[]; // Array of material paths
+  createdAt: string;
+}
+
+// New interface for creating a course
+interface NewCourse {
+  name: string;
+  code: string;
+  description: string;
+  schedule: {
+    day: string;
+    startTime: string;
+    endTime: string;
+  };
+  lectureMaterials?: string[]; // Optional since it will be handled by FormData
+}
+
+// New interface for editing a course
+interface EditCourse {
+  name: string;
+  code: string;
+  description: string;
+  schedule: {
+    day: string;
+    startTime: string;
+    endTime: string;
+  };
+  lectureMaterials?: string[]; // Optional since existing materials will be handled separately
+}
+
+// Define sorting order type
+type Order = 'asc' | 'desc';
+
+// Define sortable fields
+type SortField = 'name' | 'code' | 'instructor' | 'createdAt' | null;
+
+// Define days of week for dropdown
+const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
