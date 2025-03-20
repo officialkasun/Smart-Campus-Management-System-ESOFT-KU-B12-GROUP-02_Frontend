@@ -81,7 +81,7 @@ interface Course {
     _id: string;
     name: string;
     email: string;
-  };
+  } | null; // Make instructor nullable
   schedule: {
     day: string;
     startTime: string;
@@ -685,7 +685,7 @@ const Courses = () => {
       name: course.name,
       code: course.code,
       description: course.description,
-      instructor: course.instructor._id,
+      instructor: course.instructor?._id || '', // Safely access instructor ID
       schedule: {
         day: course.schedule.day,
         startTime: course.schedule.startTime,
@@ -1323,7 +1323,11 @@ const Courses = () => {
                       >
                         <TableCell><span className='dark:text-white text-black'>{course.name}</span></TableCell>
                         <TableCell><span className='dark:text-white text-black'>{course.code}</span></TableCell>
-                        <TableCell><span className='dark:text-white text-black'>{course.instructor.name}</span></TableCell>
+                        <TableCell>
+                          <span className='dark:text-white text-black'>
+                            {course.instructor ? course.instructor.name : 'No instructor assigned'}
+                          </span>
+                        </TableCell>
                         <TableCell>
                           <Chip
                             label={`${course.schedule.day}, ${course.schedule.startTime} - ${course.schedule.endTime}`}
@@ -1447,7 +1451,9 @@ const Courses = () => {
                         Instructor
                       </Typography>
                       <Typography variant="body1">
-                        {selectedCourse.instructor.name} ({selectedCourse.instructor.email})
+                        {selectedCourse.instructor 
+                          ? `${selectedCourse.instructor.name} (${selectedCourse.instructor.email})`
+                          : 'No instructor assigned'}
                       </Typography>
                     </div>
                   </div>
