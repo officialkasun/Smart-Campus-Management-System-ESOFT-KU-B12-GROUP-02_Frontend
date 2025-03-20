@@ -6,7 +6,6 @@ import { motion } from 'framer-motion';
 // Add date picker imports
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import dayjs from 'dayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
@@ -136,6 +135,12 @@ const Resources = () => {
   const [reservationTime, setReservationTime] = useState<dayjs.Dayjs | null>(dayjs().add(1, 'hour'));
   const [reservationLoading, setReservationLoading] = useState<boolean>(false);
   const [reservationError, setReservationError] = useState<string | null>(null);
+
+  // Add state for cancel reservation modal
+  const [cancelReservationModalOpen, setCancelReservationModalOpen] = useState<boolean>(false);
+  const [resourceToUnreserve, setResourceToUnreserve] = useState<Resource | null>(null);
+  const [cancelReservationLoading, setCancelReservationLoading] = useState<boolean>(false);
+  const [cancelReservationError, setCancelReservationError] = useState<string | null>(null);
 
   // Fetch resources function
   const fetchResources = async (showRefreshAnimation = false) => {
@@ -428,7 +433,9 @@ const Resources = () => {
   };
 
   // Get appropriate icon for resource type
-  const getResourceTypeIcon = (type: string) => {
+  const getResourceTypeIcon = (type: string | null | undefined) => {
+    if (!type) return <CategoryIcon />; // Return default icon if type is null or undefined
+    
     switch (type.toLowerCase()) {
       case 'classroom':
         return <RoomIcon />;
@@ -442,7 +449,8 @@ const Resources = () => {
   };
 
   // Capitalize first letter of string
-  const capitalizeFirstLetter = (string: string) => {
+  const capitalizeFirstLetter = (string: string | null | undefined) => {
+    if (!string) return ''; // Return empty string if input is null or undefined
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
@@ -555,11 +563,14 @@ const Resources = () => {
       // Show success message
       setSuccessMessage('Resource reserved successfully!');
       
-      // Close reservation modal after a short delay
+      // Close reservation modal after a short delay and refresh data
       setTimeout(() => {
         setReserveModalOpen(false);
         setResourceToReserve(null);
         setSuccessMessage(null);
+        
+        // Fetch fresh data to ensure we have the complete reservation details including reserved by person
+        fetchResources(true);
       }, 1500);
     } catch (err: any) {
       console.error('Error reserving resource:', err);
@@ -579,6 +590,73 @@ const Resources = () => {
     
     // If it's an object, return the name property or a fallback
     return reservedBy.name || reservedBy.email || 'Unknown user';
+  };
+
+  // Function to handle cancel reservation button click
+  const handleCancelReservationClick = (resource: Resource) => {
+    if (resource.availability) {
+      setUpdateError("This resource is not currently reserved.");
+      return;
+    }
+    
+    setResourceToUnreserve(resource);
+    setCancelReservationModalOpen(true);
+    setCancelReservationError(null);
+  };
+  
+  // Function to execute reservation cancellation
+  const handleCancelReservation = async () => {
+    if (!resourceToUnreserve) return;
+    
+    setCancelReservationLoading(true);
+    setCancelReservationError(null);
+    
+    try {
+      const response = await axios.delete(
+        `${config.apiUrl}/api/resources/${resourceToUnreserve._id}/del`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`,
+          },
+        }
+      );
+      
+      // Update the resource in the local state
+      setResources(resources.map(resource => 
+        resource._id === resourceToUnreserve._id ? response.data : resource
+      ));
+      
+      // If the selected resource in view modal is the one being unreserved, update it
+      if (selectedResource && selectedResource._id === resourceToUnreserve._id) {
+        setSelectedResource(response.data);
+      }
+      
+      // Show success message
+      setSuccessMessage('Reservation cancelled successfully!');
+      
+      // Close modals and refresh data after a short delay
+      setTimeout(() => {
+        // Close the cancel reservation modal
+        setCancelReservationModalOpen(false);
+        setResourceToUnreserve(null);
+        
+        // Also close the view modal if it's open
+        if (viewModalOpen) {
+          setViewModalOpen(false);
+        }
+        
+        // Clear success message
+        setSuccessMessage(null);
+        
+        // Fetch fresh data
+        fetchResources(true);
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error cancelling reservation:', err);
+      setCancelReservationError(err.response?.data?.message || 'Failed to cancel reservation.');
+    } finally {
+      setCancelReservationLoading(false);
+    }
   };
 
   return (
@@ -803,7 +881,7 @@ const Resources = () => {
                       </TableCell>
                       <TableCell>
                         <Box display="flex">
-                          <Tooltip title="View Details">
+                          <Tooltip key={`view-${resource._id}`} title="View Details">
                             <IconButton 
                               size="small" 
                               color="primary"
@@ -812,7 +890,7 @@ const Resources = () => {
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Edit Resource">
+                          <Tooltip key={`edit-${resource._id}`} title="Edit Resource">
                             <IconButton 
                               size="small" 
                               color="secondary"
@@ -821,7 +899,7 @@ const Resources = () => {
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Delete Resource">
+                          <Tooltip key={`delete-${resource._id}`} title="Delete Resource">
                             <IconButton 
                               size="small" 
                               color="error"
@@ -971,6 +1049,7 @@ const Resources = () => {
                 <Box mt={4} display="flex" justifyContent="space-between">
                   <Box display="flex" gap={2}>
                     <Button 
+                      key="delete-button"
                       onClick={() => handleDeleteClick(selectedResource)}
                       variant="contained" 
                       color="error"
@@ -978,8 +1057,9 @@ const Resources = () => {
                     >
                       Delete
                     </Button>
-                    {selectedResource.availability && (
+                    {selectedResource.availability ? (
                       <Button 
+                        key="reserve-button"
                         onClick={() => handleReserveClick(selectedResource)}
                         variant="contained" 
                         color="success"
@@ -987,9 +1067,20 @@ const Resources = () => {
                       >
                         Reserve
                       </Button>
+                    ) : (
+                      <Button 
+                        key="cancel-reservation-button"
+                        onClick={() => handleCancelReservationClick(selectedResource)}
+                        variant="contained" 
+                        color="warning"
+                        startIcon={<CloseIcon />}
+                      >
+                        Cancel Reservation
+                      </Button>
                     )}
                   </Box>
                   <Button 
+                    key="close-button"
                     onClick={() => setViewModalOpen(false)} 
                     variant="outlined"
                   >
@@ -1053,6 +1144,7 @@ const Resources = () => {
             </FormControl>
             <Box mt={2} display="flex" justifyContent="flex-end">
               <Button 
+                key="add-cancel-button"
                 onClick={() => {
                   setAddModalOpen(false);
                   setUpdateError(null);
@@ -1066,6 +1158,7 @@ const Resources = () => {
                 Cancel
               </Button>
               <Button 
+                key="add-confirm-button"
                 type="submit" 
                 variant="contained" 
                 color="primary"
@@ -1129,6 +1222,7 @@ const Resources = () => {
             </FormControl>
             <Box mt={2} display="flex" justifyContent="flex-end">
               <Button 
+                key="edit-cancel-button"
                 onClick={() => {
                   setEditModalOpen(false);
                   setUpdateError(null);
@@ -1142,6 +1236,7 @@ const Resources = () => {
                 Cancel
               </Button>
               <Button 
+                key="edit-confirm-button"
                 type="submit" 
                 variant="contained" 
                 color="primary"
@@ -1192,6 +1287,7 @@ const Resources = () => {
               
               <Box display="flex" gap={2} justifyContent="flex-end">
                 <Button 
+                  key="delete-cancel-button"
                   variant="outlined" 
                   color="primary"
                   onClick={() => setDeleteModalOpen(false)}
@@ -1200,6 +1296,7 @@ const Resources = () => {
                   Cancel
                 </Button>
                 <Button 
+                  key="delete-confirm-button"
                   variant="contained" 
                   color="error"
                   onClick={handleDeleteResource}
@@ -1271,6 +1368,7 @@ const Resources = () => {
                 
                 <Box display="flex" gap={2} justifyContent="flex-end">
                   <Button 
+                    key="reserve-cancel-button"
                     variant="outlined" 
                     color="primary"
                     onClick={() => setReserveModalOpen(false)}
@@ -1279,6 +1377,7 @@ const Resources = () => {
                     Cancel
                   </Button>
                   <Button 
+                    key="reserve-confirm-button"
                     type="submit"
                     variant="contained" 
                     color="success"
@@ -1289,6 +1388,70 @@ const Resources = () => {
                   </Button>
                 </Box>
               </form>
+            </>
+          )}
+        </div>
+      </Modal>
+
+      {/* Add Cancel Reservation Modal */}
+      <Modal
+        open={cancelReservationModalOpen}
+        onClose={() => {
+          if (!cancelReservationLoading) {
+            setCancelReservationModalOpen(false);
+            setCancelReservationError(null);
+            setSuccessMessage(null);
+          }
+        }}
+        aria-labelledby="cancel-reservation-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <Typography variant="h6" className="font-bold mb-4">
+            Cancel Reservation
+          </Typography>
+          
+          {successMessage && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'success.light', borderRadius: 1 }}>
+              <Typography color="success.contrastText">{successMessage}</Typography>
+            </Box>
+          )}
+          
+          {cancelReservationError && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+              <Typography color="error.contrastText">{cancelReservationError}</Typography>
+            </Box>
+          )}
+          
+          {!successMessage && resourceToUnreserve && (
+            <>
+              <Typography variant="body1" className="mb-4">
+                Are you sure you want to cancel the reservation for <strong>{resourceToUnreserve.name}</strong>?
+                {resourceToUnreserve.reservedBy && (
+                  <span> This resource is currently reserved by <strong>{formatReservedBy(resourceToUnreserve.reservedBy)}</strong>.</span>
+                )}
+              </Typography>
+              
+              <Box display="flex" gap={2} justifyContent="flex-end">
+                <Button 
+                  key="cancel-reservation-no-button"
+                  variant="outlined" 
+                  color="primary"
+                  onClick={() => setCancelReservationModalOpen(false)}
+                  disabled={cancelReservationLoading}
+                >
+                  No, Keep Reservation
+                </Button>
+                <Button 
+                  key="cancel-reservation-yes-button"
+                  variant="contained" 
+                  color="warning"
+                  onClick={handleCancelReservation}
+                  disabled={cancelReservationLoading}
+                  startIcon={cancelReservationLoading ? <CircularProgress size={20} color="inherit" /> : <CloseIcon />}
+                >
+                  {cancelReservationLoading ? "Cancelling..." : "Yes, Cancel Reservation"}
+                </Button>
+              </Box>
             </>
           )}
         </div>
