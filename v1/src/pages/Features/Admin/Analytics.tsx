@@ -15,6 +15,8 @@ import {
   IconButton,
   Tooltip,
   useTheme,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   PieChart,
@@ -28,6 +30,10 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
+  LineChart,
+  Line,
+  Area,
+  AreaChart,
 } from 'recharts';
 import {
   Refresh as RefreshIcon,
@@ -37,9 +43,13 @@ import {
   Category as CategoryIcon,
   Analytics as AnalyticsIcon,
   Error as ErrorIcon,
+  EventNote as EventIcon,
+  Group as GroupIcon,
+  CalendarToday as CalendarIcon,
+  ShowChart as ShowChartIcon,
 } from '@mui/icons-material';
 
-// Define the interface for the analytics data
+// Define the interface for the resource analytics data
 interface ResourceAnalytics {
   totalResources: number;
   totalReservedResources: number;
@@ -50,16 +60,32 @@ interface ResourceAnalytics {
   resourceUtilization: string;
 }
 
+// Define the interface for the event analytics data
+interface EventAnalytics {
+  totalEvents: number;
+  totalAttendees: number;
+  mostAttendedEvents: {
+    _id: string;
+    title: string;
+    attendeesCount: number;
+  }[];
+  upcomingEvents?: number;
+  pastEvents?: number;
+}
+
 // Define color palettes for charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 const PIE_COLORS = ['#4caf50', '#ff9800'];
+const EVENT_COLORS = ['#3f51b5', '#f44336', '#ff9800', '#2196f3', '#9c27b0'];
 
 const Analytics: React.FC = () => {
-  const [analytics, setAnalytics] = useState<ResourceAnalytics | null>(null);
+  const [resourceAnalytics, setResourceAnalytics] = useState<ResourceAnalytics | null>(null);
+  const [eventAnalytics, setEventAnalytics] = useState<EventAnalytics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [activeTab, setActiveTab] = useState<number>(0);
   
   const theme = useTheme();
 
@@ -91,6 +117,34 @@ const Analytics: React.FC = () => {
     }));
   };
 
+  // Prepare data for the event attendance chart
+  const prepareEventAttendanceData = (analytics: EventAnalytics) => {
+    if (!analytics?.mostAttendedEvents) return [];
+    
+    return analytics.mostAttendedEvents.map(event => ({
+      name: event.title,
+      attendees: event.attendeesCount
+    })).sort((a, b) => b.attendees - a.attendees);
+  };
+
+  // Prepare data for the event distribution pie chart
+  const prepareEventDistributionData = (analytics: EventAnalytics) => {
+    if (!analytics) return [];
+    
+    // If we have upcoming/past events data, use it
+    if (analytics.upcomingEvents !== undefined && analytics.pastEvents !== undefined) {
+      return [
+        { name: 'Upcoming Events', value: analytics.upcomingEvents },
+        { name: 'Past Events', value: analytics.pastEvents },
+      ];
+    }
+    
+    // Default placeholder data if we don't have the specific breakdown
+    return [
+      { name: 'Events', value: analytics.totalEvents },
+    ];
+  };
+
   // Fetch analytics data from API
   const fetchAnalytics = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
@@ -100,13 +154,23 @@ const Analytics: React.FC = () => {
     }
     
     try {
-      const response = await axios.get(`${config.apiUrl}/api/resources/analytics`, {
+      // Fetch resource analytics
+      const resourceResponse = await axios.get(`${config.apiUrl}/api/resources/analytics`, {
         headers: {
           Authorization: `Bearer ${Cookies.get('token')}`,
         },
       });
       
-      setAnalytics(response.data);
+      setResourceAnalytics(resourceResponse.data);
+      
+      // Fetch event analytics
+      const eventResponse = await axios.get(`${config.apiUrl}/api/events/analytics`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      
+      setEventAnalytics(eventResponse.data);
       setError(null);
       setLastRefreshTime(new Date());
     } catch (err: any) {
@@ -128,6 +192,11 @@ const Analytics: React.FC = () => {
   // Handle refresh button click
   const handleRefresh = () => {
     fetchAnalytics(true);
+  };
+
+  // Handle tab change
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
   };
 
   // Format the refresh time
@@ -182,7 +251,7 @@ const Analytics: React.FC = () => {
   }
 
   // Render error state
-  if (error && !analytics) {
+  if (error && !resourceAnalytics && !eventAnalytics) {
     return (
       <Box 
         display="flex" 
@@ -219,7 +288,7 @@ const Analytics: React.FC = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography
           variant="h4"
           component="h1"
@@ -227,7 +296,7 @@ const Analytics: React.FC = () => {
           sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
         >
           <AnalyticsIcon fontSize="large" />
-          Resource Analytics Dashboard
+          Campus Analytics Dashboard
         </Typography>
         
         <Box display="flex" alignItems="center">
@@ -249,7 +318,30 @@ const Analytics: React.FC = () => {
         </Box>
       </Box>
 
-      {analytics && (
+      {/* Tabs for different analytics sections */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange} 
+          aria-label="analytics tabs"
+          variant="scrollable"
+          scrollButtons="auto"
+        >
+          <Tab 
+            icon={<InventoryIcon />} 
+            label="Resource Analytics" 
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<EventIcon />} 
+            label="Event Analytics" 
+            iconPosition="start"
+          />
+        </Tabs>
+      </Box>
+
+      {/* Resource Analytics Tab */}
+      {activeTab === 0 && resourceAnalytics && (
         <Grid container spacing={3}>
           {/* Summary Cards */}
           <Grid item xs={12} md={6} lg={3}>
@@ -262,7 +354,7 @@ const Analytics: React.FC = () => {
                   </Typography>
                 </Box>
                 <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
-                  {analytics.totalResources}
+                  {resourceAnalytics.totalResources}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" textAlign="center">
                   Total resources in the system
@@ -281,7 +373,7 @@ const Analytics: React.FC = () => {
                   </Typography>
                 </Box>
                 <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
-                  {analytics.totalReservedResources}
+                  {resourceAnalytics.totalReservedResources}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" textAlign="center">
                   Currently reserved resources
@@ -300,7 +392,7 @@ const Analytics: React.FC = () => {
                   </Typography>
                 </Box>
                 <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
-                  {analytics.totalResources - analytics.totalReservedResources}
+                  {resourceAnalytics.totalResources - resourceAnalytics.totalReservedResources}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" textAlign="center">
                   Resources available for reservation
@@ -319,7 +411,7 @@ const Analytics: React.FC = () => {
                   </Typography>
                 </Box>
                 <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
-                  {analytics.mostReservedResources.length}
+                  {resourceAnalytics.mostReservedResources.length}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" textAlign="center">
                   Different types of resources
@@ -347,7 +439,7 @@ const Analytics: React.FC = () => {
                     />
                     <CircularProgress
                       variant="determinate"
-                      value={calculatePercentage(analytics.resourceUtilization)}
+                      value={calculatePercentage(resourceAnalytics.resourceUtilization)}
                       size={220}
                       thickness={4}
                       sx={{ 
@@ -364,7 +456,7 @@ const Analytics: React.FC = () => {
                       justifyContent="center"
                     >
                       <Typography variant="h4" component="div" fontWeight={700} color="primary">
-                        {analytics.resourceUtilization}
+                        {resourceAnalytics.resourceUtilization}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Utilization Rate
@@ -375,7 +467,7 @@ const Analytics: React.FC = () => {
                 
                 <Box mt={2}>
                   <Typography variant="body2" color="text.secondary" align="center">
-                    {analytics.totalReservedResources} of {analytics.totalResources} resources are currently in use
+                    {resourceAnalytics.totalReservedResources} of {resourceAnalytics.totalResources} resources are currently in use
                   </Typography>
                 </Box>
               </CardContent>
@@ -394,7 +486,7 @@ const Analytics: React.FC = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={prepareAvailabilityData(analytics)}
+                        data={prepareAvailabilityData(resourceAnalytics)}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -403,7 +495,7 @@ const Analytics: React.FC = () => {
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {prepareAvailabilityData(analytics).map((entry, index) => (
+                        {prepareAvailabilityData(resourceAnalytics).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                         ))}
                       </Pie>
@@ -431,7 +523,7 @@ const Analytics: React.FC = () => {
                 <Box height={300}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={prepareResourceTypeData(analytics)}
+                      data={prepareResourceTypeData(resourceAnalytics)}
                       margin={{
                         top: 5,
                         right: 30,
@@ -471,6 +563,229 @@ const Analytics: React.FC = () => {
                 </Box>
                 <Typography variant="body2" color="text.secondary" align="center" mt={2}>
                   Distribution of resources by type
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Event Analytics Tab */}
+      {activeTab === 1 && eventAnalytics && (
+        <Grid container spacing={3}>
+          {/* Event Summary Cards */}
+          <Grid item xs={12} md={6} lg={4}>
+            <Card className="shadow-md h-full">
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <EventIcon color="primary" sx={{ fontSize: 28, mr: 1 }} />
+                  <Typography variant="h6" component="div" fontWeight={600}>
+                    Total Events
+                  </Typography>
+                </Box>
+                <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
+                  {eventAnalytics.totalEvents}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Total events in the system
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6} lg={4}>
+            <Card className="shadow-md h-full">
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <GroupIcon color="secondary" sx={{ fontSize: 28, mr: 1 }} />
+                  <Typography variant="h6" component="div" fontWeight={600}>
+                    Total Attendees
+                  </Typography>
+                </Box>
+                <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
+                  {eventAnalytics.totalAttendees}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Total attendees across all events
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6} lg={4}>
+            <Card className="shadow-md h-full">
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <ShowChartIcon color="info" sx={{ fontSize: 28, mr: 1 }} />
+                  <Typography variant="h6" component="div" fontWeight={600}>
+                    Average Attendance
+                  </Typography>
+                </Box>
+                <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
+                  {eventAnalytics.totalEvents > 0 
+                    ? Math.round((eventAnalytics.totalAttendees / eventAnalytics.totalEvents) * 10) / 10
+                    : 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Average attendees per event
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Event Distribution Pie Chart */}
+          <Grid item xs={12} md={6}>
+            <Card className="shadow-md">
+              <CardContent>
+                <Typography variant="h6" component="div" fontWeight={600} mb={3}>
+                  Event Distribution
+                </Typography>
+                
+                <Box height={300}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={prepareEventDistributionData(eventAnalytics)}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={renderCustomizedLabel}
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {prepareEventDistributionData(eventAnalytics).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={EVENT_COLORS[index % EVENT_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Legend 
+                        formatter={(value, entry, index) => {
+                          return <span style={{ color: theme.palette.text.primary }}>{value}</span>;
+                        }}
+                      />
+                      <RechartsTooltip formatter={(value) => [`${value} events`, '']} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Typography variant="body2" color="text.secondary" align="center" mt={2}>
+                  Distribution of events by status
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Area Chart for Event Attendance */}
+          <Grid item xs={12} md={6}>
+            <Card className="shadow-md">
+              <CardContent>
+                <Typography variant="h6" component="div" fontWeight={600} mb={3}>
+                  Attendees Distribution
+                </Typography>
+                
+                <Box height={300}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={prepareEventAttendanceData(eventAnalytics)}
+                      margin={{
+                        top: 10,
+                        right: 30,
+                        left: 0,
+                        bottom: 0,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="name" 
+                        tick={{ fill: theme.palette.text.primary }}
+                      />
+                      <YAxis 
+                        tick={{ fill: theme.palette.text.primary }}
+                        allowDecimals={false}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value) => [`${value} attendees`, '']}
+                        contentStyle={{ 
+                          backgroundColor: theme.palette.background.paper,
+                          border: `1px solid ${theme.palette.divider}`
+                        }}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="attendees" 
+                        stroke={theme.palette.secondary.main}
+                        fill={theme.palette.secondary.main}
+                        fillOpacity={0.3}
+                        name="Attendees"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Typography variant="body2" color="text.secondary" align="center" mt={2}>
+                  Distribution of attendees across events
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Most Attended Events */}
+          <Grid item xs={12}>
+            <Card className="shadow-md">
+              <CardContent>
+                <Typography variant="h6" component="div" fontWeight={600} mb={3}>
+                  Most Attended Events
+                </Typography>
+                
+                <Box height={400}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={prepareEventAttendanceData(eventAnalytics)}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        type="number"
+                        tick={{ fill: theme.palette.text.primary }}
+                        allowDecimals={false}
+                      />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category"
+                        tick={{ fill: theme.palette.text.primary }}
+                        width={150}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value) => [`${value} attendees`, '']}
+                        contentStyle={{ 
+                          backgroundColor: theme.palette.background.paper,
+                          border: `1px solid ${theme.palette.divider}`
+                        }}
+                      />
+                      <Legend 
+                        formatter={(value, entry, index) => {
+                          return <span style={{ color: theme.palette.text.primary }}>Attendee Count</span>;
+                        }}
+                      />
+                      <Bar 
+                        dataKey="attendees" 
+                        name="Attendee Count"
+                        fill={theme.palette.info.main}
+                        radius={[0, 4, 4, 0]}
+                      >
+                        {prepareEventAttendanceData(eventAnalytics).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={EVENT_COLORS[index % EVENT_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Typography variant="body2" color="text.secondary" align="center" mt={2}>
+                  Ranking of events by attendee count
                 </Typography>
               </CardContent>
             </Card>
