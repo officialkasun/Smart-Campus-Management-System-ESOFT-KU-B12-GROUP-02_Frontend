@@ -17,6 +17,8 @@ import {
   useTheme,
   Tabs,
   Tab,
+  Avatar,
+  Chip,
 } from '@mui/material';
 import {
   PieChart,
@@ -47,6 +49,9 @@ import {
   Group as GroupIcon,
   CalendarToday as CalendarIcon,
   ShowChart as ShowChartIcon,
+  Person as PersonIcon,
+  PersonOutline as PersonOutlineIcon,
+  SupervisedUserCircle as SupervisedUserCircleIcon,
 } from '@mui/icons-material';
 
 // Define the interface for the resource analytics data
@@ -73,14 +78,32 @@ interface EventAnalytics {
   pastEvents?: number;
 }
 
+// Define the interface for user analytics data
+interface UserAnalytics {
+  mostActiveUsers: {
+    _id: string;
+    name: string;
+    email: string;
+    attendedEventsCount: number;
+  }[];
+  totalUsersCount?: number;
+  usersByRole?: {
+    admin?: number;
+    lecturer?: number;
+    student?: number;
+  };
+}
+
 // Define color palettes for charts
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 const PIE_COLORS = ['#4caf50', '#ff9800'];
 const EVENT_COLORS = ['#3f51b5', '#f44336', '#ff9800', '#2196f3', '#9c27b0'];
+const USER_COLORS = ['#00bcd4', '#673ab7', '#e91e63', '#009688', '#ffc107'];
 
 const Analytics: React.FC = () => {
   const [resourceAnalytics, setResourceAnalytics] = useState<ResourceAnalytics | null>(null);
   const [eventAnalytics, setEventAnalytics] = useState<EventAnalytics | null>(null);
+  const [userAnalytics, setUserAnalytics] = useState<UserAnalytics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -145,6 +168,38 @@ const Analytics: React.FC = () => {
     ];
   };
 
+  // Prepare data for user activity chart
+  const prepareUserActivityData = (analytics: UserAnalytics) => {
+    if (!analytics?.mostActiveUsers) return [];
+    
+    return analytics.mostActiveUsers.map(user => ({
+      name: user.name,
+      events: user.attendedEventsCount
+    }));
+  };
+
+  // Prepare data for users by role pie chart
+  const prepareUserRoleData = (analytics: UserAnalytics) => {
+    if (!analytics?.usersByRole) return [];
+    
+    const roles = analytics.usersByRole;
+    const result = [];
+    
+    if (roles.admin !== undefined) {
+      result.push({ name: 'Admin', value: roles.admin });
+    }
+    
+    if (roles.lecturer !== undefined) {
+      result.push({ name: 'Lecturer', value: roles.lecturer });
+    }
+    
+    if (roles.student !== undefined) {
+      result.push({ name: 'Student', value: roles.student });
+    }
+    
+    return result.length > 0 ? result : [{ name: 'Users', value: analytics.totalUsersCount || 0 }];
+  };
+
   // Fetch analytics data from API
   const fetchAnalytics = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
@@ -171,6 +226,16 @@ const Analytics: React.FC = () => {
       });
       
       setEventAnalytics(eventResponse.data);
+
+      // Fetch user analytics
+      const userResponse = await axios.get(`${config.apiUrl}/api/users/analytics`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      
+      setUserAnalytics(userResponse.data);
+      
       setError(null);
       setLastRefreshTime(new Date());
     } catch (err: any) {
@@ -251,7 +316,7 @@ const Analytics: React.FC = () => {
   }
 
   // Render error state
-  if (error && !resourceAnalytics && !eventAnalytics) {
+  if (error && !resourceAnalytics && !eventAnalytics && !userAnalytics) {
     return (
       <Box 
         display="flex" 
@@ -335,6 +400,11 @@ const Analytics: React.FC = () => {
           <Tab 
             icon={<EventIcon />} 
             label="Event Analytics" 
+            iconPosition="start"
+          />
+          <Tab 
+            icon={<GroupIcon />} 
+            label="User Analytics" 
             iconPosition="start"
           />
         </Tabs>
@@ -790,6 +860,242 @@ const Analytics: React.FC = () => {
               </CardContent>
             </Card>
           </Grid>
+        </Grid>
+      )}
+      
+      {/* User Analytics Tab */}
+      {activeTab === 2 && userAnalytics && (
+        <Grid container spacing={3}>
+          {/* User Summary Cards */}
+          <Grid item xs={12} md={6} lg={4}>
+            <Card className="shadow-md h-full">
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <GroupIcon color="primary" sx={{ fontSize: 28, mr: 1 }} />
+                  <Typography variant="h6" component="div" fontWeight={600}>
+                    Total Users
+                  </Typography>
+                </Box>
+                <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
+                  {userAnalytics.totalUsersCount || userAnalytics.mostActiveUsers.length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Total registered users
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6} lg={4}>
+            <Card className="shadow-md h-full">
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <PersonIcon color="secondary" sx={{ fontSize: 28, mr: 1 }} />
+                  <Typography variant="h6" component="div" fontWeight={600}>
+                    Active Users
+                  </Typography>
+                </Box>
+                <Typography variant="h3" component="div" fontWeight={700} textAlign="center" my={2}>
+                  {userAnalytics.mostActiveUsers.filter(user => user.attendedEventsCount > 0).length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" textAlign="center">
+                  Users with event participation
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={6} lg={4}>
+            <Card className="shadow-md h-full">
+              <CardContent>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <PersonOutlineIcon color="info" sx={{ fontSize: 28, mr: 1 }} />
+                  <Typography variant="h6" component="div" fontWeight={600}>
+                    Most Active User
+                  </Typography>
+                </Box>
+                <Box display="flex" flexDirection="column" alignItems="center" my={2}>
+                  <Avatar sx={{ width: 60, height: 60, mb: 1, bgcolor: theme.palette.primary.main }}>
+                    {userAnalytics.mostActiveUsers[0]?.name.charAt(0).toUpperCase()}
+                  </Avatar>
+                  <Typography variant="h6" component="div" fontWeight={600} textAlign="center">
+                    {userAnalytics.mostActiveUsers[0]?.name || 'N/A'}
+                  </Typography>
+                  <Chip 
+                    label={`${userAnalytics.mostActiveUsers[0]?.attendedEventsCount || 0} Events`}
+                    color="primary"
+                    size="small"
+                    sx={{ mt: 1 }}
+                  />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* User Activity Bar Chart */}
+          <Grid item xs={12}>
+            <Card className="shadow-md">
+              <CardContent>
+                <Typography variant="h6" component="div" fontWeight={600} mb={3}>
+                  User Activity by Event Participation
+                </Typography>
+                
+                <Box height={400}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={prepareUserActivityData(userAnalytics)}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 20,
+                        bottom: 5,
+                      }}
+                      layout="vertical"
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        type="number"
+                        tick={{ fill: theme.palette.text.primary }}
+                        allowDecimals={false}
+                      />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category"
+                        tick={{ fill: theme.palette.text.primary }}
+                        width={150}
+                      />
+                      <RechartsTooltip 
+                        formatter={(value) => [`${value} events attended`, '']}
+                        contentStyle={{ 
+                          backgroundColor: theme.palette.background.paper,
+                          border: `1px solid ${theme.palette.divider}`
+                        }}
+                      />
+                      <Legend 
+                        formatter={(value, entry, index) => {
+                          return <span style={{ color: theme.palette.text.primary }}>Events Attended</span>;
+                        }}
+                      />
+                      <Bar 
+                        dataKey="events" 
+                        name="Events Attended"
+                        radius={[0, 4, 4, 0]}
+                      >
+                        {prepareUserActivityData(userAnalytics).map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={USER_COLORS[index % USER_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+                <Typography variant="body2" color="text.secondary" align="center" mt={2}>
+                  Users ranked by event participation
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* User Roles Distribution (if data available) */}
+          {userAnalytics.usersByRole && (
+            <Grid item xs={12} md={6}>
+              <Card className="shadow-md">
+                <CardContent>
+                  <Typography variant="h6" component="div" fontWeight={600} mb={3}>
+                    User Distribution by Role
+                  </Typography>
+                  
+                  <Box height={300}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={prepareUserRoleData(userAnalytics)}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={renderCustomizedLabel}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {prepareUserRoleData(userAnalytics).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={USER_COLORS[index % USER_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Legend 
+                          formatter={(value, entry, index) => {
+                            return <span style={{ color: theme.palette.text.primary }}>{value}</span>;
+                          }}
+                        />
+                        <RechartsTooltip formatter={(value) => [`${value} users`, '']} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary" align="center" mt={2}>
+                    Distribution of users by role
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          )}
+
+          {/* Top Users Card View */}
+          <Grid item xs={12} md={userAnalytics.usersByRole ? 6 : 12}>
+            <Card className="shadow-md">
+              <CardContent>
+                <Typography variant="h6" component="div" fontWeight={600} mb={3}>
+                  Most Active Users
+                </Typography>
+                
+                <Box display="flex" flexDirection="column" gap={2}>
+                  {userAnalytics.mostActiveUsers.slice(0, 5).map((user, index) => (
+                    <Paper 
+                      key={user._id} 
+                      elevation={1} 
+                      sx={{ 
+                        p: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderLeft: `4px solid ${USER_COLORS[index % USER_COLORS.length]}`
+                      }}
+                    >
+                      <Avatar 
+                        sx={{ 
+                          bgcolor: USER_COLORS[index % USER_COLORS.length],
+                          width: 40, 
+                          height: 40,
+                          mr: 2
+                        }}
+                      >
+                        {user.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <Box flexGrow={1}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="subtitle1" fontWeight={500}>
+                            {user.name}
+                          </Typography>
+                          <Chip 
+                            label={`${user.attendedEventsCount} events`}
+                            size="small"
+                            color={index === 0 ? "primary" : "default"}
+                          />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary">
+                          {user.email}
+                        </Typography>
+                      </Box>
+                    </Paper>
+                  ))}
+
+                  {userAnalytics.mostActiveUsers.length === 0 && (
+                    <Box textAlign="center" py={4}>
+                      <Typography color="text.secondary">No user activity data available</Typography>
+                    </Box>
+                  )}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
         </Grid>
       )}
     </motion.div>
