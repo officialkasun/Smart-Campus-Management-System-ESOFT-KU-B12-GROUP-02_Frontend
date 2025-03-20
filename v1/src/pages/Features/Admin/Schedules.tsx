@@ -165,6 +165,13 @@ const Schedules = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [eventToDelete, setEventToDelete] = useState<ScheduleEvent | null>(null);
 
+  // Add state for delete schedule confirmation dialog
+  const [deleteScheduleDialogOpen, setDeleteScheduleDialogOpen] = useState<boolean>(false);
+  const [scheduleToDelete, setScheduleToDelete] = useState<Schedule | null>(null);
+  const [deleteScheduleLoading, setDeleteScheduleLoading] = useState<boolean>(false);
+  const [deleteScheduleSuccess, setDeleteScheduleSuccess] = useState<boolean>(false);
+  const [deleteScheduleError, setDeleteScheduleError] = useState<string | null>(null);
+
   // Fetch schedules function
   const fetchSchedules = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
@@ -667,6 +674,49 @@ const Schedules = () => {
     setDeleteSuccess(false);
   };
 
+  // Function to handle deleting a complete schedule
+  const handleDeleteSchedule = async () => {
+    if (!scheduleToDelete) return;
+    
+    setDeleteScheduleLoading(true);
+    setDeleteScheduleError(null);
+    
+    try {
+      await axios.delete(`${config.apiUrl}/api/schedules/events/complete/${scheduleToDelete._id}`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      
+      // Show success state
+      setDeleteScheduleSuccess(true);
+      
+      // Close the delete dialog after a delay
+      setTimeout(() => {
+        setDeleteScheduleDialogOpen(false);
+        // Refresh the schedules
+        fetchSchedules(true);
+        // Reset states
+        setScheduleToDelete(null);
+        setDeleteScheduleSuccess(false);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Error deleting schedule:', err);
+      setDeleteScheduleError(err.response?.data?.message || 'Failed to delete schedule');
+    } finally {
+      setDeleteScheduleLoading(false);
+    }
+  };
+
+  // Function to open delete schedule confirmation dialog
+  const openDeleteScheduleDialog = (schedule: Schedule) => {
+    setScheduleToDelete(schedule);
+    setDeleteScheduleDialogOpen(true);
+    setDeleteScheduleError(null);
+    setDeleteScheduleSuccess(false);
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -897,7 +947,7 @@ const Schedules = () => {
                               <IconButton 
                                 size="small" 
                                 color="error"
-                                onClick={() => showNotImplementedMessage("Delete")}
+                                onClick={() => openDeleteScheduleDialog(schedule)}
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -1218,6 +1268,54 @@ const Schedules = () => {
             startIcon={deleteLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
           >
             {deleteLoading ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Schedule Confirmation Dialog */}
+      <Dialog
+        open={deleteScheduleDialogOpen}
+        onClose={() => !deleteScheduleLoading && setDeleteScheduleDialogOpen(false)}
+      >
+        <DialogTitle>
+          Confirm Delete Schedule
+        </DialogTitle>
+        <DialogContent>
+          {deleteScheduleSuccess ? (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Schedule deleted successfully!
+            </Alert>
+          ) : (
+            <>
+              {deleteScheduleError && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {deleteScheduleError}
+                </Alert>
+              )}
+              <Typography>
+                Are you sure you want to delete the entire schedule for student <strong>{scheduleToDelete?.studentId.name}</strong>?
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                This will delete all {scheduleToDelete?.events.length} events in this schedule. This action cannot be undone.
+              </Typography>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteScheduleDialogOpen(false)} 
+            disabled={deleteScheduleLoading || deleteScheduleSuccess}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteSchedule}
+            color="error"
+            variant="contained"
+            disabled={deleteScheduleLoading || deleteScheduleSuccess}
+            startIcon={deleteScheduleLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+          >
+            {deleteScheduleLoading ? "Deleting..." : "Delete Schedule"}
           </Button>
         </DialogActions>
       </Dialog>
