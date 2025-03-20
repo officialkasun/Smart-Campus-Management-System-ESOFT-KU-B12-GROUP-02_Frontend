@@ -563,14 +563,11 @@ const Resources = () => {
       // Show success message
       setSuccessMessage('Resource reserved successfully!');
       
-      // Close reservation modal after a short delay and refresh data
+      // Close reservation modal after a short delay
       setTimeout(() => {
         setReserveModalOpen(false);
         setResourceToReserve(null);
         setSuccessMessage(null);
-        
-        // Fetch fresh data to ensure we have the complete reservation details including reserved by person
-        fetchResources(true);
       }, 1500);
     } catch (err: any) {
       console.error('Error reserving resource:', err);

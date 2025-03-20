@@ -7,7 +7,6 @@ import Error404 from './pages/Public/Error404';
 import { Container } from '@mui/material';
 import Navbar from './components/Navbar';
 import Login from './pages/Auth/Login';
-import Test from './pages/Features/Lecturer/Test';
 import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -18,6 +17,7 @@ import { default as CoursesLecture } from './pages/Features/Lecturer/Courses';
 import Events from './pages/Features/Admin/Events';
 import Resources from './pages/Features/Admin/Resources';
 import Students from './pages/Features/Lecturer/Students';
+import Schedules from './pages/Features/Admin/Schedules';
 
 function App() {
   return (
@@ -36,6 +36,7 @@ function App() {
           <Route path="/admin/courses" element={<ProtectedRoute element={<Courses />} allowedRole="admin" />}  />
           <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
           <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
+          <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
           //close Kasuns Part
 
 
