@@ -276,27 +276,6 @@ const Courses = () => {
     setSortField(field);
   };
 
-  // Function to get icon based on file type
-  const getFileIcon = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    
-    switch (extension) {
-      case 'pdf':
-        return <PdfIcon color="error" />;
-      case 'doc':
-      case 'docx':
-        return <DocIcon color="primary" />;
-      case 'ppt':
-      case 'pptx':
-        return <PptIcon color="warning" />;
-      case 'txt':
-        return <TxtIcon color="info" />;
-      default:
-        return <AttachFileIcon />;
-    }
-  };
-
-
   // Function to compare values for sorting
   const compareValues = (a: any, b: any, orderBy: SortField) => {
     if (!orderBy) return 0;
@@ -855,8 +834,247 @@ const Courses = () => {
     }
   };
 
-        {/* Add Search Bar */}
-        <Paper className="shadow-lg mb-4">
+  // Search course by code
+  const searchCourseByCode = async () => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, reset to show all courses
+      setSearchPerformed(false);
+      fetchCourses();
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+
+    try {
+      const response = await axios.get(
+        `${config.apiUrl}/api/courses/${searchQuery.trim()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      // If successful, update courses state with the single course
+      if (response.data) {
+        setCourses([response.data]);
+      } else {
+        setCourses([]);
+      }
+      setError(null);
+    } catch (err: any) {
+      console.error('Error searching course:', err);
+      setSearchError('Course not found with the provided code');
+      setCourses([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Search course by name
+  const searchCourseByName = async () => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, reset to show all courses
+      setSearchPerformed(false);
+      fetchCourses();
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+
+    try {
+      const response = await axios.get(
+        `${config.apiUrl}/api/courses/name/${searchQuery.trim()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      if (response.data && response.data.length > 0) {
+        setCourses(response.data);
+      } else {
+        setCourses([]);
+        setSearchError('No courses found with the provided name');
+      }
+    } catch (err: any) {
+      console.error('Error searching course by name:', err);
+      setSearchError('Failed to search for courses by name');
+      setCourses([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Handle search form submit
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchType === 'code') {
+      searchCourseByCode();
+    } else {
+      searchCourseByName();
+    }
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // Clear search error when input changes
+    if (searchError) {
+      setSearchError(null);
+    }
+  };
+
+  // Handle search type change
+  const handleSearchTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchType(e.target.value as 'code' | 'name');
+    // Clear search query and errors when changing search type
+    setSearchQuery('');
+    setSearchError(null);
+  };
+
+  // Clear search and show all courses again
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchError(null);
+    setSearchPerformed(false);
+    fetchCourses();
+  };
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    fetchCourses(true);
+  };
+
+  // Format the refresh time in a readable format
+  const formatRefreshTime = (date: Date) => {
+    return date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      hour12: true 
+    });
+  };
+
+  // Function to check if file type is allowed
+  const isFileTypeAllowed = (file: File): boolean => {
+    const allowedTypes = [
+      'application/pdf', // PDF
+      'application/msword', // DOC
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+      'application/vnd.ms-powerpoint', // PPT
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
+      'text/plain', // TXT
+    ];
+    return allowedTypes.includes(file.type);
+  };
+
+  // Function to get icon based on file type
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    switch (extension) {
+      case 'pdf':
+        return <PdfIcon color="error" />;
+      case 'doc':
+      case 'docx':
+        return <DocIcon color="primary" />;
+      case 'ppt':
+      case 'pptx':
+        return <PptIcon color="warning" />;
+      case 'txt':
+        return <TxtIcon color="info" />;
+      default:
+        return <AttachFileIcon />;
+    }
+  };
+
+  // Function to get file name from path
+  const getFileNameFromPath = (path: string): string => {
+    return path.split('/').pop() || path;
+  };
+
+  // Handle file selection for creating a course
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null);
+    
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      
+      // Check if all files are valid types
+      const invalidFiles = filesArray.filter(file => !isFileTypeAllowed(file));
+      
+      if (invalidFiles.length > 0) {
+        setUploadError('Only PDF, DOC, PPT, and TXT files are allowed');
+        return;
+      }
+      
+      setUploadedFiles(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  // Handle removing file from upload list
+  const handleRemoveFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle file selection for editing a course
+  const handleEditFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditUploadError(null);
+    
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      
+      // Check if all files are valid types
+      const invalidFiles = filesArray.filter(file => !isFileTypeAllowed(file));
+      
+      if (invalidFiles.length > 0) {
+        setEditUploadError('Only PDF, DOC, PPT, and TXT files are allowed');
+        return;
+      }
+      
+      setEditUploadedFiles(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  // Handle removing file from edit upload list
+  const handleRemoveEditFile = (index: number) => {
+    setEditUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle removing existing material
+  const handleRemoveExistingMaterial = (materialPath: string) => {
+    setRemovedMaterials(prev => [...prev, materialPath]);
+    setEditCourse(prev => ({
+      ...prev,
+      lectureMaterials: prev.lectureMaterials?.filter(material => material !== materialPath),
+    }));
+  };
+
+  return (
+    <motion.div
+      className="p-4 md:p-8 min-h-screen w-full bg-secondary"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <Typography
+        variant="h4"
+        component="h1"
+        className="text-center md:text-left font-bold text-primary mb-6 p-4"
+      >
+        Course Management
+      </Typography>
+
+      {error && !searchError && <Typography color="error" className="mb-4">{error}</Typography>}
+
+      {/* Add Search Bar */}
+      <Paper className="shadow-lg mb-4">
         <Box p={2}>
           <form onSubmit={handleSearchSubmit}>
             <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={2} mb={2}>
@@ -949,189 +1167,950 @@ const Courses = () => {
         </Box>
       </Paper>
 
-
-
-  <TableContainer>
-  <Table>
-    <TableHead className="bg-gray-100">
-      <TableRow>
-        <TableCell className="font-medium">
-          <TableSortLabel
-            active={sortField === 'name'}
-            direction={sortField === 'name' ? sortOrder : 'asc'}
-            onClick={() => handleRequestSort('name')}
-          >
-            Course Name
-          </TableSortLabel>
-        </TableCell>
-        <TableCell className="font-medium">
-          <TableSortLabel
-            active={sortField === 'code'}
-            direction={sortField === 'code' ? sortOrder : 'asc'}
-            onClick={() => handleRequestSort('code')}
-          >
-            Code
-          </TableSortLabel>
-        </TableCell>
-        <TableCell className="font-medium">
-          <TableSortLabel
-            active={sortField === 'instructor'}
-            direction={sortField === 'instructor' ? sortOrder : 'asc'}
-            onClick={() => handleRequestSort('instructor')}
-          >
-            Instructor
-          </TableSortLabel>
-        </TableCell>
-        <TableCell className="font-medium">Schedule</TableCell>
-        <TableCell className="font-medium">
-          <TableSortLabel
-            active={sortField === 'createdAt'}
-            direction={sortField === 'createdAt' ? sortOrder : 'asc'}
-            onClick={() => handleRequestSort('createdAt')}
-          >
-            Created At
-          </TableSortLabel>
-        </TableCell>
-        <TableCell className="font-medium">Actions</TableCell>
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      {sortedCourses
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-        .map((course) => {
-          const inSession = isCurrentlyInSession(course);
-          return (
-            <TableRow 
-              key={course._id} 
-              hover
-              sx={{
-                backgroundColor: inSession ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 152, 0, 0.1)',
-                '&:hover': {
-                  backgroundColor: inSession ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 152, 0, 0.2)',
-                }
-              }}
-            >
-              <TableCell><span className='dark:text-white text-black'>{course.name}</span></TableCell>
-              <TableCell><span className='dark:text-white text-black'>{course.code}</span></TableCell>
-              <TableCell><span className='dark:text-white text-black'>{course.instructor.name}</span></TableCell>
-              <TableCell>
-                <Chip
-                  label={`${course.schedule.day}, ${course.schedule.startTime} - ${course.schedule.endTime}`}
-                  size="small"
-                  color={inSession ? "success" : "warning"}
-                />
-              </TableCell>
-              <TableCell><span className='dark:text-white text-black'>{new Date(course.createdAt).toLocaleDateString()}</span></TableCell>
-              <TableCell>
-                <Box display="flex">
-                  <IconButton 
-                    size="small" 
-                    color="primary"
-                    onClick={() => handleViewCourse(course)}
-                  >
-                    <VisibilityIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton 
-                    size="small" 
-                    color="secondary"
-                    onClick={() => handleOpenEditModal(course)}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton 
-                    size="small" 
-                    color="error"
-                    onClick={() => handleDeleteConfirmation(course)}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      {courses.length === 0 && (
-        <TableRow>
-          <TableCell colSpan={6} align="center" className="py-8">
-            <Typography variant="body1" color="textSecondary">
-              No courses found
+      <Paper className="shadow-lg">
+        <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
+          <Box>
+            <Typography variant="h6" component="div" className="font-semibold">
+              {searchPerformed ? 'Search Results' : 'My Courses'}
             </Typography>
-          </TableCell>
-        </TableRow>
-      )}
-    </TableBody>
-  </Table>
-</TableContainer>
+            {!searchPerformed && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                <span className='dark:text-gray-400 text-gray-700'>Last updated: {formatRefreshTime(lastRefreshTime)}</span>
+              </Typography>
+            )}
+          </Box>
+          <Box display="flex" gap={2}>
+            <Tooltip title="Refresh data">
+              <span>
+                <IconButton
+                  color="primary"
+                  onClick={handleRefresh}
+                  disabled={refreshing || loading}
+                  className={refreshing ? 'animate-spin' : ''}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenCreateModal}
+            >
+              Create Course
+            </Button>
+          </Box>
+        </Box>
 
+        {(loading || searchLoading || refreshing) ? (
+          <Box p={4} display="flex" justifyContent="center">
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead className="bg-gray-100">
+                <TableRow>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'name'}
+                      direction={sortField === 'name' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('name')}
+                    >
+                      Course Name
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'code'}
+                      direction={sortField === 'code' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('code')}
+                    >
+                      Code
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'instructor'}
+                      direction={sortField === 'instructor' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('instructor')}
+                    >
+                      Instructor
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell className="font-medium">Schedule</TableCell>
+                  <TableCell className="font-medium">
+                    <TableSortLabel
+                      active={sortField === 'createdAt'}
+                      direction={sortField === 'createdAt' ? sortOrder : 'asc'}
+                      onClick={() => handleRequestSort('createdAt')}
+                    >
+                      Created At
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell className="font-medium">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sortedCourses
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((course) => {
+                    const inSession = isCurrentlyInSession(course);
+                    return (
+                      <TableRow 
+                        key={course._id} 
+                        hover
+                        sx={{
+                          backgroundColor: inSession ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 152, 0, 0.1)',
+                          '&:hover': {
+                            backgroundColor: inSession ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 152, 0, 0.2)',
+                          }
+                        }}
+                      >
+                        <TableCell><span className='dark:text-white text-black'>{course.name}</span></TableCell>
+                        <TableCell><span className='dark:text-white text-black'>{course.code}</span></TableCell>
+                        <TableCell><span className='dark:text-white text-black'>{course.instructor.name}</span></TableCell>
+                        <TableCell>
+                          <Chip
+                            label={`${course.schedule.day}, ${course.schedule.startTime} - ${course.schedule.endTime}`}
+                            size="small"
+                            color={inSession ? "success" : "warning"}
+                          />
+                        </TableCell>
+                        <TableCell><span className='dark:text-white text-black'>{new Date(course.createdAt).toLocaleDateString()}</span></TableCell>
+                        <TableCell>
+                          <Box display="flex">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => handleViewCourse(course)}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton 
+                              size="small" 
+                              color="secondary"
+                              onClick={() => handleOpenEditModal(course)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={() => handleDeleteConfirmation(course)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                {courses.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" className="py-8">
+                      <Typography variant="body1" color="textSecondary">
+                        No courses found
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={courses.length}
+          rowsPerPage={rowsPerPage}
+          page={courses.length <= page * rowsPerPage ? 0 : page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Paper>
 
+      {/* Course Details Modal */}
+      <Modal
+        open={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        aria-labelledby="course-details-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          {selectedCourse && (
+            <Card className="shadow-none">
+              <CardContent className="p-6">
+                <Box display="flex" alignItems="center" mb={3}>
+                  <Avatar 
+                    sx={{ width: 56, height: 56, mr: 2, bgcolor: 'primary.main' }}
+                  >
+                    <SchoolIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" className="font-bold">
+                      {selectedCourse.name}
+                    </Typography>
+                    <Chip 
+                      label={selectedCourse.code}
+                      color="primary"
+                      size="small"
+                    />
+                  </Box>
+                </Box>
 
-{/* Course Details Modal */}
-<Modal
-  open={viewModalOpen}
-  onClose={() => setViewModalOpen(false)}
-  aria-labelledby="course-details-modal"
->
-  <div className="bg-white w-full max-w-lg p-6 m-auto rounded-md shadow-lg">
-    {selectedCourse && (
-      <Card>
-        <CardContent>
-          <Typography variant="h6">{selectedCourse.name}</Typography>
-          <Typography variant="body2">Code: {selectedCourse.code}</Typography>
-          <Typography variant="body2">Instructor: {selectedCourse.instructor.name}</Typography>
-          <Typography variant="body2">Schedule: {selectedCourse.schedule.day}, {selectedCourse.schedule.startTime} - {selectedCourse.schedule.endTime}</Typography>
-          <Button onClick={() => setViewModalOpen(false)}>Close</Button>
-        </CardContent>
-      </Card>
-    )}
-  </div>
-</Modal>
+                <Divider className="my-3" />
 
-{/* Create Course Modal */}
-<Modal open={createModalOpen} onClose={() => !createLoading && setCreateModalOpen(false)}>
-  <div className="bg-white w-full max-w-lg p-6 m-auto rounded-md shadow-lg">
-    <Card>
-      <CardContent>
-        <Typography variant="h6">Create New Course</Typography>
-        {createError && <Alert severity="error">{createError}</Alert>}
-        <TextField fullWidth required label="Course Name" name="name" value={newCourse.name} onChange={handleNewCourseChange} />
-        <TextField fullWidth required label="Course Code" name="code" value={newCourse.code} onChange={handleNewCourseChange} />
-        <Button type="submit" variant="contained" onClick={handleCreateCourse}>Create Course</Button>
-      </CardContent>
-    </Card>
-  </div>
-</Modal>
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <CodeIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Course Code
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedCourse.code}
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <DescriptionIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Description
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedCourse.description}
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <PersonIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Instructor
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedCourse.instructor.name} ({selectedCourse.instructor.email})
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <ScheduleIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Schedule
+                      </Typography>
+                      <Typography variant="body1">
+                        {`${selectedCourse.schedule.day}, ${selectedCourse.schedule.startTime} - ${selectedCourse.schedule.endTime}`}
+                      </Typography>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <GroupIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Students Enrolled
+                      </Typography>
+                      <Typography variant="body1">
+                        {selectedCourse.students.length}
+                      </Typography>
+                    </div>
+                  </div>
 
-{/* Edit Course Modal */}
-<Modal open={editModalOpen} onClose={() => !editLoading && setEditModalOpen(false)}>
-  <div className="bg-white w-full max-w-lg p-6 m-auto rounded-md shadow-lg">
-    <Card>
-      <CardContent>
-        <Typography variant="h6">Edit Course</Typography>
-        {editError && <Alert severity="error">{editError}</Alert>}
-        <TextField fullWidth required label="Course Name" name="name" value={editCourse.name} onChange={handleEditCourseChange} />
-        <TextField fullWidth required label="Course Code" name="code" value={editCourse.code} onChange={handleEditCourseChange} />
-        <Button type="submit" variant="contained" onClick={handleUpdateCourse}>Update Course</Button>
-      </CardContent>
-    </Card>
-  </div>
-</Modal>
+                  <div className="flex items-center">
+                    <AccessTimeIcon className="text-blue-600 mr-3" />
+                    <div>
+                      <Typography variant="body2" color="primary">
+                        Created On
+                      </Typography>
+                      <Typography variant="body1">
+                        {new Date(selectedCourse.createdAt).toLocaleString()}
+                      </Typography>
+                    </div>
+                  </div>
+                </div>
 
-{/* Delete Confirmation Modal */}
-<Modal open={deleteModalOpen} onClose={() => !deleteLoading && setDeleteModalOpen(false)}>
-  <div className="bg-white w-full max-w-md p-6 m-auto rounded-md shadow-lg">
-    <Card>
-      <CardContent>
-        <Typography variant="h6" color="error">Delete Course</Typography>
-        <Typography variant="body1">Are you sure you want to delete {courseToDelete?.name}?</Typography>
-        <Button onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
-        <Button variant="contained" color="error" onClick={handleDeleteCourse}>Delete</Button>
-      </CardContent>
-    </Card>
-  </div>
-</Modal>
+                {/* Add Lecture Materials section */}
+                {selectedCourse.lectureMaterials && selectedCourse.lectureMaterials.length > 0 && (
+                  <>
+                    <Divider className="my-3" />
+                    
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+                      <Typography variant="h6">
+                        Lecture Materials
+                      </Typography>
+                    </Box>
+                    
+                    <Grid container spacing={1}>
+                      {selectedCourse.lectureMaterials.map((material, index) => (
+                        <Grid item xs={12} sm={6} key={index}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              p: 1,
+                              borderRadius: 1,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              '&:hover': {
+                                bgcolor: 'action.hover',
+                              }
+                            }}
+                          >
+                            <Link 
+                              href={`${config.apiUrl}/${material}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="none"
+                              sx={{ display: 'flex', alignItems: 'center', width: '80%' }}
+                            >
+                              {getFileIcon(material)}
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  ml: 1,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                {getFileNameFromPath(material)}
+                              </Typography>
+                            </Link>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleRemoveExistingMaterial(material)}
+                              title="Remove material"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  </>
+                )}
 
+                <Box mt={4} display="flex" justifyContent="space-between">
+                  <Box display="flex" gap={2}>
+                    <button 
+                      onClick={() => handleDeleteConfirmation(selectedCourse)}
+                      className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700 transition-colors"
+                    >
+                      <DeleteIcon fontSize="small" />
+                      <span>Delete Course</span>
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setViewModalOpen(false);
+                        handleOpenEditModal(selectedCourse);
+                      }}
+                      className="bg-blue-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-blue-700 transition-colors"
+                    >
+                      <EditIcon fontSize="small" />
+                      <span>Edit Course</span>
+                    </button>
+                  </Box>
+                  <Button 
+                    onClick={() => setViewModalOpen(false)} 
+                    variant="contained"
+                  >
+                    Close
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </Modal>
 
+      {/* Create Course Modal */}
+      <Modal
+        open={createModalOpen}
+        onClose={() => !createLoading && setCreateModalOpen(false)}
+        aria-labelledby="create-course-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 3 }}>
+                <span className='font-semibold text-blue-600'>Create New Course</span>
+              </Typography>
+
+              {createError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{createError}</Alert>
+              )}
+              
+              {createSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>Course created successfully!</Alert>
+              )}
+                
+              <Box component="form" onSubmit={handleCreateCourse} sx={{ mt: 1 }}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Course Name"
+                  name="name"
+                  value={newCourse.name}
+                  onChange={handleNewCourseChange}
+                  error={!!validationErrors.name}
+                  helperText={validationErrors.name}
+                  disabled={createLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Course Code"
+                  name="code"
+                  value={newCourse.code}
+                  onChange={handleNewCourseChange}
+                  error={!!validationErrors.code}
+                  helperText={validationErrors.code}
+                  disabled={createLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Description"
+                  name="description"
+                  multiline
+                  rows={3}
+                  value={newCourse.description}
+                  onChange={handleNewCourseChange}
+                  error={!!validationErrors.description}
+                  helperText={validationErrors.description}
+                  disabled={createLoading}
+                />
+
+                <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+                  Schedule
+                </Typography>
+
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="day-select-label">Day</InputLabel>
+                  <Select
+                    labelId="day-select-label"
+                    name="day"
+                    value={newCourse.schedule.day}
+                    label="Day"
+                    onChange={handleNewCourseChange as (event: SelectChangeEvent) => void}
+                    disabled={createLoading}
+                  >
+                    {daysOfWeek.map(day => (
+                      <MenuItem key={day} value={day}>{day}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box display="flex" gap={2} mt={2}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DemoContainer components={['TimePicker']}>
+                      <TimePicker
+                        label="Start Time"
+                        value={parseTimeToDayjs(newCourse.schedule.startTime)}
+                        onChange={(newValue) => handleNewCourseChange(newValue, 'startTime')}
+                        slotProps={{ 
+                          textField: { 
+                            fullWidth: true,
+                            required: true,
+                            error: !!validationErrors.startTime,
+                            helperText: validationErrors.startTime,
+                            disabled: createLoading
+                          } 
+                        }}
+                      />
+                    </DemoContainer>
+                  </LocalizationProvider>
+                  
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DemoContainer components={['TimePicker']}>
+                      <TimePicker
+                        label="End Time"
+                        value={parseTimeToDayjs(newCourse.schedule.endTime)}
+                        onChange={(newValue) => handleNewCourseChange(newValue, 'endTime')}
+                        slotProps={{ 
+                          textField: { 
+                            fullWidth: true,
+                            required: true,
+                            error: !!validationErrors.endTime,
+                            helperText: validationErrors.endTime,
+                            disabled: createLoading
+                          } 
+                        }}
+                      />
+                    </DemoContainer>
+                  </LocalizationProvider>
+                </Box>
+
+                {/* Lecture Materials Upload */}
+                <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>
+                  Lecture Materials
+                </Typography>
+                
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleFileSelect}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                  multiple
+                />
+                
+                <Box sx={{ mb: 2 }}>
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<UploadIcon />}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={createLoading}
+                  >
+                    Upload Files
+                  </Button>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                    Only PDF, DOC, PPT, and TXT files are allowed
+                  </Typography>
+                </Box>
+                
+                {uploadError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {uploadError}
+                  </Alert>
+                )}
+                
+                {uploadedFiles.length > 0 && (
+                  <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
+                    {uploadedFiles.map((file, index) => (
+                      <ListItem
+                        key={index}
+                        secondaryAction={
+                          <IconButton 
+                            edge="end" 
+                            aria-label="delete"
+                            onClick={() => handleRemoveFile(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        }
+                      >
+                        <ListItemIcon>
+                          {getFileIcon(file.name)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={file.name}
+                          secondary={`${(file.size / 1024).toFixed(2)} KB`}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+
+                {createLoading && (
+                  <Box sx={{ width: '100%', mt: 2 }}>
+                    <LinearProgress />
+                  </Box>
+                )}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                  <Button 
+                    onClick={() => setCreateModalOpen(false)} 
+                    variant="outlined"
+                    disabled={createLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    variant="contained"
+                    color="primary"
+                    disabled={createLoading || createSuccess}
+                  >
+                    {createLoading ? 'Creating...' : 'Create Course'}
+                  </Button>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+
+      {/* Edit Course Modal */}
+      <Modal
+        open={editModalOpen}
+        onClose={() => !editLoading && setEditModalOpen(false)}
+        aria-labelledby="edit-course-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 3 }}>
+                <span className='font-semibold text-blue-600'>Edit Course</span>
+              </Typography>
+
+              {editError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{editError}</Alert>
+              )}
+              
+              {editSuccess && (
+                <Alert severity="success" sx={{ mb: 2 }}>Course updated successfully!</Alert>
+              )}
+                
+              <Box component="form" onSubmit={handleUpdateCourse} sx={{ mt: 1 }}>
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Course Name"
+                  name="name"
+                  value={editCourse.name}
+                  onChange={handleEditCourseChange}
+                  error={!!editValidationErrors.name}
+                  helperText={editValidationErrors.name}
+                  disabled={editLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Course Code"
+                  name="code"
+                  value={editCourse.code}
+                  onChange={handleEditCourseChange}
+                  error={!!editValidationErrors.code}
+                  helperText={editValidationErrors.code}
+                  disabled={editLoading}
+                />
+                
+                <TextField
+                  margin="normal"
+                  fullWidth
+                  required
+                  label="Description"
+                  name="description"
+                  multiline
+                  rows={3}
+                  value={editCourse.description}
+                  onChange={handleEditCourseChange}
+                  error={!!editValidationErrors.description}
+                  helperText={editValidationErrors.description}
+                  disabled={editLoading}
+                />
+
+                <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
+                  Schedule
+                </Typography>
+
+                <FormControl fullWidth margin="normal">
+                  <InputLabel id="edit-day-select-label">Day</InputLabel>
+                  <Select
+                    labelId="edit-day-select-label"
+                    name="day"
+                    value={editCourse.schedule.day}
+                    label="Day"
+                    onChange={handleEditCourseChange as (event: SelectChangeEvent) => void}
+                    disabled={editLoading}
+                  >
+                    {daysOfWeek.map(day => (
+                      <MenuItem key={day} value={day}>{day}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Box display="flex" gap={2} mt={2}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DemoContainer components={['TimePicker']}>
+                      <TimePicker
+                        label="Start Time"
+                        value={parseTimeToDayjs(editCourse.schedule.startTime)}
+                        onChange={(newValue) => handleEditCourseChange(newValue, 'startTime')}
+                        slotProps={{ 
+                          textField: { 
+                            fullWidth: true,
+                            required: true,
+                            error: !!editValidationErrors.startTime,
+                            helperText: editValidationErrors.startTime,
+                            disabled: editLoading
+                          } 
+                        }}
+                      />
+                    </DemoContainer>
+                  </LocalizationProvider>
+                  
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DemoContainer components={['TimePicker']}>
+                      <TimePicker
+                        label="End Time"
+                        value={parseTimeToDayjs(editCourse.schedule.endTime)}
+                        onChange={(newValue) => handleEditCourseChange(newValue, 'endTime')}
+                        slotProps={{ 
+                          textField: { 
+                            fullWidth: true,
+                            required: true,
+                            error: !!editValidationErrors.endTime,
+                            helperText: editValidationErrors.endTime,
+                            disabled: editLoading
+                          } 
+                        }}
+                      />
+                    </DemoContainer>
+                  </LocalizationProvider>
+                </Box>
+
+                {/* Lecture Materials Section */}
+                <Typography variant="subtitle1" sx={{ mt: 3, mb: 1 }}>
+                  Lecture Materials
+                </Typography>
+                
+                {/* Existing Materials */}
+                {editCourse.lectureMaterials && editCourse.lectureMaterials.length > 0 ? (
+                  <Box mb={2}>
+                    <Typography variant="body2" color="text.secondary" mb={1}>
+                      Current Materials:
+                    </Typography>
+                    <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                      {editCourse.lectureMaterials.map((material, index) => (
+                        <ListItem
+                          key={index}
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              aria-label="mark for deletion"
+                              onClick={() => handleRemoveExistingMaterial(material)}
+                              disabled={editLoading}
+                              color="error"
+                              title="Remove material (will be deleted when form is submitted)"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          }
+                        >
+                          <ListItemIcon>
+                            {getFileIcon(material)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Link 
+                                href={`${config.apiUrl}/${material}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                              >
+                                {getFileNameFromPath(material)}
+                              </Link>
+                            }
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                ) : (
+                  !removedMaterials.length && courseToEdit && courseToEdit.lectureMaterials && (
+                    <Typography variant="body2" color="text.secondary" mb={2}>
+                      No materials currently uploaded
+                    </Typography>
+                  )
+                )}
+                
+                {/* Show materials marked for deletion */}
+                {removedMaterials.length > 0 && (
+                  <Box mb={2}>
+                    <Typography variant="body2" color="error" mb={1}>
+                      Materials to be removed:
+                    </Typography>
+                    <List dense sx={{ bgcolor: 'rgba(211, 47, 47, 0.1)', borderRadius: 1 }}>
+                      {removedMaterials.map((material, index) => (
+                        <ListItem
+                          key={index}
+                          secondaryAction={
+                            <IconButton
+                              edge="end"
+                              aria-label="restore material"
+                              onClick={() => setRemovedMaterials(prev => prev.filter(m => m !== material))}
+                              disabled={editLoading}
+                              color="primary"
+                              title="Restore material"
+                            >
+                              <RefreshIcon />
+                            </IconButton>
+                          }
+                        >
+                          <ListItemIcon>
+                            {getFileIcon(material)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={getFileNameFromPath(material)}
+                            secondary="Will be removed on update"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+                
+                {/* Upload New Materials */}
+                <input
+                  type="file"
+                  ref={editFileInputRef}
+                  style={{ display: 'none' }}
+                  onChange={handleEditFileSelect}
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.txt"
+                  multiple
+                />
+                
+                <Box sx={{ mb: 2 }}>
+                  <Button 
+                    variant="outlined" 
+                    startIcon={<UploadIcon />}
+                    onClick={() => editFileInputRef.current?.click()}
+                    disabled={editLoading}
+                  >
+                    Upload New Files
+                  </Button>
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                    Only PDF, DOC, PPT, and TXT files are allowed
+                  </Typography>
+                </Box>
+                
+                {editUploadError && (
+                  <Alert severity="error" sx={{ mb: 2 }}>
+                    {editUploadError}
+                  </Alert>
+                )}
+                
+                {/* New Files to Upload */}
+                {editUploadedFiles.length > 0 && (
+                  <Box mb={2}>
+                    <Typography variant="body2" color="text.secondary" mb={1}>
+                      New Files to Upload:
+                    </Typography>
+                    <List dense sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
+                      {editUploadedFiles.map((file, index) => (
+                        <ListItem
+                          key={index}
+                          secondaryAction={
+                            <IconButton 
+                              edge="end" 
+                              aria-label="delete"
+                              onClick={() => handleRemoveEditFile(index)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          }
+                        >
+                          <ListItemIcon>
+                            {getFileIcon(file.name)}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={file.name}
+                            secondary={`${(file.size / 1024).toFixed(2)} KB`}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+
+                {editLoading && (
+                  <Box sx={{ width: '100%', mt: 2 }}>
+                    <LinearProgress />
+                  </Box>
+                )}
+                
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+                  <Button 
+                    onClick={() => setEditModalOpen(false)} 
+                    variant="outlined"
+                    disabled={editLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    variant="contained"
+                    color="primary"
+                    disabled={editLoading || editSuccess}
+                  >
+                    {editLoading ? 'Updating...' : 'Update Course'}
+                  </Button>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => !deleteLoading && setDeleteModalOpen(false)}
+        aria-labelledby="delete-course-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
+          <Card className="shadow-none">
+            <CardContent className="p-6">
+              <Typography variant="h6" component="h2" sx={{ mb: 2 }} color="error">
+                Delete Course
+              </Typography>
+              
+              {deleteError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{deleteError}</Alert>
+              )}
+              
+              {deleteSuccess ? (
+                <Alert severity="success" sx={{ mb: 2 }}>Course deleted successfully!</Alert>
+              ) : (
+                <>
+                  <Typography variant="body1" sx={{ mb: 3 }}>
+                    Are you sure you want to delete the course <strong>{courseToDelete?.name}</strong> ({courseToDelete?.code})?
+                    This action cannot be undone.
+                  </Typography>
+                  
+                  {courseToDelete?.students.length > 0 && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      Warning: This course has {courseToDelete.students.length} enrolled students.
+                    </Alert>
+                  )}
+                  
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 3 }}>
+                    <Button 
+                      onClick={() => setDeleteModalOpen(false)} 
+                      variant="outlined"
+                      disabled={deleteLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <button 
+                      onClick={handleDeleteCourse}
+                      disabled={deleteLoading}
+                      className="bg-red-600 text-white px-4 py-2 rounded flex items-center space-x-2 hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {deleteLoading ? (
+                        <CircularProgress size={20} color="inherit" />
+                      ) : (
+                        <DeleteIcon fontSize="small" />
+                      )}
+                      <span>{deleteLoading ? 'Deleting...' : 'Delete Course'}</span>
+                    </button>
+                  </Box>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </Modal>
+    </motion.div>
+  );
 };
 
-  export default Courses;
+export default Courses;
