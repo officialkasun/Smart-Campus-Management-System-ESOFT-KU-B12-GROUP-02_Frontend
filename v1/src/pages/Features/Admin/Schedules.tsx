@@ -158,6 +158,13 @@ const Schedules = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStudents, setLoadingStudents] = useState<boolean>(false);
 
+  // Add state for delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [eventToDelete, setEventToDelete] = useState<ScheduleEvent | null>(null);
+
   // Fetch schedules function
   const fetchSchedules = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
@@ -610,6 +617,54 @@ const Schedules = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Function to handle deleting an event
+  const handleDeleteEvent = async () => {
+
+   let studentId = selectedSchedule.studentId._id;
+  
+    if (!eventToDelete) return;
+    
+    setDeleteLoading(true);
+    setDeleteError(null);
+    
+    try {
+      await axios.delete(`${config.apiUrl}/api/schedules/events/event/${studentId}/${eventToDelete._id}`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      
+      // Show success state
+      setDeleteSuccess(true);
+      
+      // Close the delete dialog after a delay
+      setTimeout(() => {
+        setDeleteDialogOpen(false);
+        // Also close the event details modal
+        setViewEventModalOpen(false);
+        // Refresh the schedules
+        fetchSchedules(true);
+        // Reset states
+        setEventToDelete(null);
+        setDeleteSuccess(false);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Error deleting event:', err);
+      setDeleteError(err.response?.data?.message || 'Failed to delete event');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Function to open delete confirmation dialog
+  const openDeleteDialog = (event: ScheduleEvent) => {
+    setEventToDelete(event);
+    setDeleteDialogOpen(true);
+    setDeleteError(null);
+    setDeleteSuccess(false);
   };
 
   return (
@@ -1097,6 +1152,14 @@ const Schedules = () => {
                     >
                       Edit Event
                     </Button>
+                    <Button 
+                      onClick={() => openDeleteDialog(selectedEvent)}
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                    >
+                      Delete
+                    </Button>
                   </Box>
                   <Button 
                     onClick={() => setViewEventModalOpen(false)} 
@@ -1110,6 +1173,54 @@ const Schedules = () => {
           )}
         </div>
       </Modal>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => !deleteLoading && setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>
+          Confirm Delete
+        </DialogTitle>
+        <DialogContent>
+          {deleteSuccess ? (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Event deleted successfully!
+            </Alert>
+          ) : (
+            <>
+              {deleteError && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                  {deleteError}
+                </Alert>
+              )}
+              <Typography>
+                Are you sure you want to delete the event <strong>{eventToDelete?.title}</strong>?
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                This action cannot be undone.
+              </Typography>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)} 
+            disabled={deleteLoading || deleteSuccess}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteEvent}
+            color="error"
+            variant="contained"
+            disabled={deleteLoading || deleteSuccess}
+            startIcon={deleteLoading ? <CircularProgress size={20} /> : <DeleteIcon />}
+          >
+            {deleteLoading ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Create New Schedule Modal */}
       <Dialog
