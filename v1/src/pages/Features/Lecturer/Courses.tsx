@@ -126,3 +126,95 @@ type SortField = 'name' | 'code' | 'instructor' | 'createdAt' | null;
 
 // Define days of week for dropdown
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const Courses = () => {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(0);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+
+  // New state for sorting
+  const [sortOrder, setSortOrder] = useState<Order>('asc');
+  const [sortField, setSortField] = useState<SortField>(null);
+
+  // New state for viewing course details
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState<boolean>(false);
+
+  // New state for creating courses
+  const [createModalOpen, setCreateModalOpen] = useState<boolean>(false);
+  const [newCourse, setNewCourse] = useState<NewCourse>({
+    name: '',
+    code: '',
+    description: '',
+    schedule: {
+      day: 'Monday',
+      startTime: '',
+      endTime: '',
+    },
+  });
+  const [validationErrors, setValidationErrors] = useState<{
+    name?: string;
+    code?: string;
+    description?: string;
+    startTime?: string;
+    endTime?: string;
+  }>({});
+  const [createLoading, setCreateLoading] = useState<boolean>(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createSuccess, setCreateSuccess] = useState<boolean>(false);
+  
+  // State for delete confirmation
+  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
+
+  // New state for editing courses
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+  const [editCourse, setEditCourse] = useState<EditCourse>({
+    name: '',
+    code: '',
+    description: '',
+    schedule: {
+      day: 'Monday',
+      startTime: '',
+      endTime: '',
+    },
+  });
+  const [editValidationErrors, setEditValidationErrors] = useState<{
+    name?: string;
+    code?: string;
+    description?: string;
+    startTime?: string;
+    endTime?: string;
+  }>({});
+  const [editLoading, setEditLoading] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<boolean>(false);
+
+  // New state for search functionality
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+  const [searchType, setSearchType] = useState<'code' | 'name'>('code');
+  
+  // New state for tracking last refresh time
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // New state for file uploads
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadLoading, setUploadLoading] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // State for edit form file uploads
+  const [editUploadedFiles, setEditUploadedFiles] = useState<File[]>([]);
+  const [editUploadError, setEditUploadError] = useState<string | null>(null);
+  const [removedMaterials, setRemovedMaterials] = useState<string[]>([]);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
