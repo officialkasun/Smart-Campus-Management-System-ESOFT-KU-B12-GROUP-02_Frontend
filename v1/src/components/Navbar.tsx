@@ -156,10 +156,9 @@ const Navbar: React.FC = () => {
     navigate('/');
   };
 
+  // Function to navigate to notifications page without resetting count
   const navigateToNotifications = () => {
     navigate('/notifications');
-    // Reset the unread count when navigating to notifications
-    setUnreadCount(0);
   };
 
   return (
