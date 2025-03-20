@@ -159,12 +159,12 @@ const navigationConfig: RoleNavConfig = {
       action: 'Manage Students'
     },
     {
-      id: 'assignments',
-      title: 'Assignments',
-      description: 'Create and manage assignments',
-      icon: <AssignmentIcon fontSize="large" className="text-orange-600 dark:text-orange-400" />,
-      path: '/lecturer/assignments',
-      action: 'Manage Assignments'
+      id: 'events',
+      title: 'Event Management',
+      description: 'Create and manage events',
+      icon: <EventIcon fontSize="large" className="text-green-800 dark:text-green-600" />,
+      path: '/lecturer/events',
+      action: 'Manage Events'
     },
     {
       id: 'grading',
