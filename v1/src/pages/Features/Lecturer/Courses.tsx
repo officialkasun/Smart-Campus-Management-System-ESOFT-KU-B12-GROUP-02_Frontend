@@ -276,6 +276,27 @@ const Courses = () => {
     setSortField(field);
   };
 
+  // Function to get icon based on file type
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    switch (extension) {
+      case 'pdf':
+        return <PdfIcon color="error" />;
+      case 'doc':
+      case 'docx':
+        return <DocIcon color="primary" />;
+      case 'ppt':
+      case 'pptx':
+        return <PptIcon color="warning" />;
+      case 'txt':
+        return <TxtIcon color="info" />;
+      default:
+        return <AttachFileIcon />;
+    }
+  };
+
+
   // Function to compare values for sorting
   const compareValues = (a: any, b: any, orderBy: SortField) => {
     if (!orderBy) return 0;
