@@ -91,7 +91,12 @@ const Notifications = () => {
         },
       });
       
-      setNotifications(response.data);
+      // Sort notifications by createdAt, newest first
+      const sortedNotifications = response.data.sort((a: Notification, b: Notification) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      setNotifications(sortedNotifications);
       
       // Update last refresh time
       setLastRefreshTime(new Date());
