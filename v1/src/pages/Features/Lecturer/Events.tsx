@@ -1,34 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import Cookies from 'js-cookie';
+import config from '../../../config';
+import { motion } from 'framer-motion';
+import {
+  Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TablePagination, Chip, IconButton, Box, CircularProgress, Tooltip, TableSortLabel,
+  Modal, Card, CardContent, Divider, Button, Avatar, TextField, InputAdornment,
+  FormControl, InputLabel, MenuItem, Select, FormHelperText, Alert, LinearProgress, 
+  List, ListItem, ListItemAvatar, ListItemButton, ListItemText, Checkbox, ListItemIcon,
+} from '@mui/material';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import dayjs from 'dayjs';
+import {
+  Visibility as VisibilityIcon, Refresh as RefreshIcon, Event as EventIcon, 
+  LocationOn as LocationIcon, Person as PersonIcon, Group as GroupIcon, 
+  CalendarToday as CalendarIcon, Search as SearchIcon, Clear as ClearIcon, 
+  Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, 
+  PersonAdd as PersonAddIcon, PersonRemove as PersonRemoveIcon,
+} from '@mui/icons-material';
 
-const Events: React.FC = () => {
-  const [events, setEvents] = useState([]);
-
-  useEffect(() => {
-    const fetchEvents = async () => {
-      const data = [
-        { id: 1, title: 'Workshop on AI', date: '2023-11-01', location: 'Auditorium A' },
-        { id: 2, title: 'Guest Lecture on Cloud Computing', date: '2023-11-05', location: 'Room 204' },
-        { id: 3, title: 'Hackathon', date: '2023-11-10', location: 'Main Hall' },
-      ];
-      setEvents(data);
-    };
-    fetchEvents();
-  }, []);
-
-  return (
-    <div>
-      <h1>Upcoming Events</h1>
-      <ul>
-        {events.map((event) => (
-          <li key={event.id}>
-            <h2>{event.title}</h2>
-            <p>Date: {event.date}</p>
-            <p>Location: {event.location}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 };
 
 export default Events;
