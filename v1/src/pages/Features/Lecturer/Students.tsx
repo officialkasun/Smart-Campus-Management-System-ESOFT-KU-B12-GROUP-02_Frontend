@@ -31,4 +31,25 @@ interface User {
   
   // Define sortable fields
   type SortField = 'id' | 'name' | 'email' | 'createdAt' | null;
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(0);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState<boolean>(false);
+  
+  const [sortOrder, setSortOrder] = useState<Order>('asc');
+  const [sortField, setSortField] = useState<SortField>(null);
+  
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+  
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  
+  const [searchType, setSearchType] = useState<'id' | 'name'>('id');
   
