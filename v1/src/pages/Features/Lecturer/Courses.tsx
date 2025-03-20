@@ -260,5 +260,580 @@ const Courses = () => {
     fetchCourses();
   }, []);
 
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  // Sort handlers
+  const handleRequestSort = (field: SortField) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
+  };
+
+  // Function to compare values for sorting
+  const compareValues = (a: any, b: any, orderBy: SortField) => {
+    if (!orderBy) return 0;
+
+    if (b[orderBy] < a[orderBy]) {
+      return sortOrder === 'asc' ? 1 : -1;
+    }
+    if (b[orderBy] > a[orderBy]) {
+      return sortOrder === 'asc' ? -1 : 1;
+    }
+    return 0;
+  };
+
+  // Sort the courses based on current sort field and direction
+  const sortedCourses = React.useMemo(() => {
+    if (!sortField) return courses;
+
+    return [...courses].sort((a, b) => {
+      return -compareValues(a, b, sortField);
+    });
+  }, [courses, sortField, sortOrder]);
+
+  // Function to handle viewing a course
+  const handleViewCourse = (course: Course) => {
+    setSelectedCourse(course);
+    setViewModalOpen(true);
+  };
+
+  // Helper function to check if a course is currently in session
+  const isCurrentlyInSession = (course: Course): boolean => {
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const today = daysOfWeek[new Date().getDay()];
+    
+    // Check if the course is scheduled for today
+    if (course.schedule.day !== today) {
+      return false;
+    }
+    
+    // Get current time in 24-hour format (HH:MM)
+    const now = new Date();
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+    const currentTimeStr = `${currentHours.toString().padStart(2, '0')}:${currentMinutes.toString().padStart(2, '0')}`;
+    
+    // Parse start and end times to 24-hour format for comparison
+    const parseTimeToMinutes = (timeStr: string): number => {
+      // Handle different time formats (10:00 AM, 10:00, etc.)
+      let hours = 0;
+      let minutes = 0;
+      
+      if (timeStr.includes(':')) {
+        const timeParts = timeStr.split(':');
+        hours = parseInt(timeParts[0], 10);
+        
+        // Extract minutes, removing any AM/PM
+        const minutesPart = timeParts[1].replace(/\s*[AP]M\s*$/, '');
+        minutes = parseInt(minutesPart, 10);
+        
+        // Convert 12-hour format to 24-hour if needed
+        if (timeStr.toUpperCase().includes('PM') && hours < 12) {
+          hours += 12;
+        }
+        if (timeStr.toUpperCase().includes('AM') && hours === 12) {
+          hours = 0;
+        }
+      } else {
+        // If there's no colon, assume it's just hours
+        hours = parseInt(timeStr, 10);
+      }
+      
+      return hours * 60 + minutes;
+    };
+    
+    const currentTime = currentHours * 60 + currentMinutes;
+    const startTime = parseTimeToMinutes(course.schedule.startTime);
+    const endTime = parseTimeToMinutes(course.schedule.endTime);
+    
+    return currentTime >= startTime && currentTime <= endTime;
+  };
+
+  // Handle opening the create course modal
+  const handleOpenCreateModal = () => {
+    setCreateModalOpen(true);
+    setNewCourse({
+      name: '',
+      code: '',
+      description: '',
+      schedule: {
+        day: 'Monday',
+        startTime: '',
+        endTime: '',
+      },
+    });
+    setValidationErrors({});
+    setCreateError(null);
+    setUploadedFiles([]);
+    setUploadError(null);
+  };
+
+  // Modify handleNewCourseChange to handle MUI TimePicker changes
+  const handleNewCourseChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }> | null, field?: string) => {
+    // If this is a time change from the TimePicker
+    if (field === 'startTime' || field === 'endTime') {
+      const timeValue = e as dayjs.Dayjs | null;
+      
+      if (timeValue) {
+        // Format time as HH:MM AM/PM
+        const formattedTime = timeValue.format('h:mm A');
+        
+        setNewCourse(prev => ({
+          ...prev,
+          schedule: {
+            ...prev.schedule,
+            [field]: formattedTime
+          }
+        }));
+        
+        // Clear validation error
+        if (validationErrors[field as 'startTime' | 'endTime']) {
+          setValidationErrors(prev => ({
+            ...prev,
+            [field]: undefined
+          }));
+        }
+      }
+    } 
+    // Otherwise this is a standard input change
+    else if (e && 'target' in e) {
+      const { name, value } = e.target;
+      if (!name) return;
+      
+      if (name === 'day') {
+        setNewCourse(prev => ({
+          ...prev,
+          schedule: {
+            ...prev.schedule,
+            [name]: value
+          }
+        }));
+      } else {
+        setNewCourse(prev => ({
+          ...prev,
+          [name]: value
+        }));
+        
+        // Clear validation error
+        if (validationErrors[name as keyof typeof validationErrors]) {
+          setValidationErrors(prev => ({
+            ...prev,
+            [name]: undefined
+          }));
+        }
+      }
+    }
+  };
+
+  // Convert time string to dayjs object
+  const parseTimeToDayjs = (timeStr: string): dayjs.Dayjs | null => {
+    if (!timeStr) return null;
+    return dayjs(timeStr, 'h:mm A');
+  };
+
+  // Helper function to convert 24-hour format to 12-hour format with AM/PM
+  const convertTo12HourFormat = (time24: string): string => {
+    if (!time24 || !time24.includes(':')) return time24;
+    
+    const [hourStr, minuteStr] = time24.split(':');
+    let hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr, 10);
+    
+    const period = hour >= 12 ? 'PM' : 'AM';
+    hour = hour % 12 || 12; // Convert to 12-hour format
+    
+    return `${hour}:${minute.toString().padStart(2, '0')} ${period}`;
+  };
+  
+  // Helper function to convert 12-hour format to 24-hour format for the time picker
+  const convertTo24HourFormat = (time12: string): string => {
+    if (!time12) return '';
+    
+    const isPM = time12.toLowerCase().includes('pm');
+    const timeOnly = time12.replace(/\s*[APap][Mm]\s*$/, '');
+    
+    const [hourStr, minuteStr] = timeOnly.split(':');
+    let hour = parseInt(hourStr, 10);
+    
+    if (isPM && hour < 12) hour += 12;
+    if (!isPM && hour === 12) hour = 0;
+    
+    return `${hour.toString().padStart(2, '0')}:${minuteStr}`;
+  };
+
+  // Helper to convert time string to Date object
+  const parseTimeString = (timeStr: string): Date | null => {
+    if (!timeStr) return null;
+    
+    const today = new Date();
+    const [time, period] = timeStr.split(' ');
+    
+    if (!time) return null;
+    
+    let [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
+    
+    // Convert to 24-hour format if needed
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    const result = new Date(today);
+    result.setHours(hours);
+    result.setMinutes(minutes || 0);
+    return result;
+  };
+
+  // Validate the form
+  const validateForm = (): boolean => {
+    const errors: {
+      name?: string;
+      code?: string;
+      description?: string;
+      startTime?: string;
+      endTime?: string;
+    } = {};
+    
+    if (!newCourse.name.trim()) {
+      errors.name = 'Course name is required';
+    }
+    
+    if (!newCourse.code.trim()) {
+      errors.code = 'Course code is required';
+    }
+    
+    if (!newCourse.description.trim()) {
+      errors.description = 'Description is required';
+    }
+    
+    if (!newCourse.schedule.startTime.trim()) {
+      errors.startTime = 'Start time is required';
+    }
+    
+    if (!newCourse.schedule.endTime.trim()) {
+      errors.endTime = 'End time is required';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit the new course
+  const handleCreateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    setCreateLoading(true);
+    setCreateError(null);
+    
+    try {
+      // If files are uploaded, use FormData
+      if (uploadedFiles.length > 0) {
+        const formData = new FormData();
+        
+        // Append course data
+        formData.append('name', newCourse.name);
+        formData.append('code', newCourse.code);
+        formData.append('description', newCourse.description);
+        formData.append('schedule[day]', newCourse.schedule.day);
+        formData.append('schedule[startTime]', newCourse.schedule.startTime);
+        formData.append('schedule[endTime]', newCourse.schedule.endTime);
+        
+        // Append files
+        uploadedFiles.forEach(file => {
+          formData.append('lectureMaterials', file);
+        });
+        
+        await axios.post(
+          `${config.apiUrl}/api/courses`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${Cookies.get('token')}`,
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+      } else {
+        // No files, use regular JSON payload
+        await axios.post(
+          `${config.apiUrl}/api/courses`,
+          newCourse,
+          {
+            headers: {
+              Authorization: `Bearer ${Cookies.get('token')}`
+            }
+          }
+        );
+      }
+      
+      setCreateSuccess(true);
+      
+      // Refresh courses list
+      fetchCourses();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setCreateModalOpen(false);
+        setCreateSuccess(false);
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Error creating course:', err);
+      setCreateError(err.response?.data?.message || 'Failed to create course. Please try again.');
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  // Function to handle delete confirmation
+  const handleDeleteConfirmation = (course: Course) => {
+    setCourseToDelete(course);
+    setDeleteModalOpen(true);
+    setDeleteError(null);
+    setDeleteSuccess(false);
+  };
+
+  // Function to delete course
+  const handleDeleteCourse = async () => {
+    if (!courseToDelete) return;
+    
+    setDeleteLoading(true);
+    setDeleteError(null);
+    
+    try {
+      await axios.delete(`${config.apiUrl}/api/courses/${courseToDelete._id}`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`
+        }
+      });
+      
+      setDeleteSuccess(true);
+      
+      // Refresh courses list
+      fetchCourses();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setDeleteModalOpen(false);
+        setCourseToDelete(null);
+        setDeleteSuccess(false);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Error deleting course:', err);
+      setDeleteError(err.response?.data?.message || 'Failed to delete course. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Handle opening the edit course modal
+  const handleOpenEditModal = (course: Course) => {
+    setCourseToEdit(course);
+    setEditModalOpen(true);
+    setEditCourse({
+      name: course.name,
+      code: course.code,
+      description: course.description,
+      schedule: {
+        day: course.schedule.day,
+        startTime: course.schedule.startTime,
+        endTime: course.schedule.endTime,
+      },
+      lectureMaterials: course.lectureMaterials
+    });
+    setEditValidationErrors({});
+    setEditError(null);
+    setEditSuccess(false);
+    setEditUploadedFiles([]);
+    setEditUploadError(null);
+    setRemovedMaterials([]);
+  };
+
+  // Handle edit course form changes
+  const handleEditCourseChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }> | null, field?: string) => {
+    // If this is a time change from the TimePicker
+    if (field === 'startTime' || field === 'endTime') {
+      const timeValue = e as dayjs.Dayjs | null;
+      
+      if (timeValue) {
+        // Format time as HH:MM AM/PM
+        const formattedTime = timeValue.format('h:mm A');
+        
+        setEditCourse(prev => ({
+          ...prev,
+          schedule: {
+            ...prev.schedule,
+            [field]: formattedTime
+          }
+        }));
+        
+        // Clear validation error
+        if (editValidationErrors[field as 'startTime' | 'endTime']) {
+          setEditValidationErrors(prev => ({
+            ...prev,
+            [field]: undefined
+          }));
+        }
+      }
+    } 
+    // Otherwise this is a standard input change
+    else if (e && 'target' in e) {
+      const { name, value } = e.target;
+      if (!name) return;
+      
+      if (name === 'day') {
+        setEditCourse(prev => ({
+          ...prev,
+          schedule: {
+            ...prev.schedule,
+            [name]: value
+          }
+        }));
+      } else {
+        setEditCourse(prev => ({
+          ...prev,
+          [name]: value
+        }));
+        
+        // Clear validation error
+        if (editValidationErrors[name as keyof typeof editValidationErrors]) {
+          setEditValidationErrors(prev => ({
+            ...prev,
+            [name]: undefined
+          }));
+        }
+      }
+    }
+  };
+
+  // Validate the edit form
+  const validateEditForm = (): boolean => {
+    const errors: {
+      name?: string;
+      code?: string;
+      description?: string;
+      startTime?: string;
+      endTime?: string;
+    } = {};
+    
+    if (!editCourse.name.trim()) {
+      errors.name = 'Course name is required';
+    }
+    
+    if (!editCourse.code.trim()) {
+      errors.code = 'Course code is required';
+    }
+    
+    if (!editCourse.description.trim()) {
+      errors.description = 'Description is required';
+    }
+    
+    if (!editCourse.schedule.startTime.trim()) {
+      errors.startTime = 'Start time is required';
+    }
+    
+    if (!editCourse.schedule.endTime.trim()) {
+      errors.endTime = 'End time is required';
+    }
+    
+    setEditValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit the edited course
+  const handleUpdateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateEditForm() || !courseToEdit) return;
+    
+    setEditLoading(true);
+    setEditError(null);
+    
+    try {
+      const updatePayload = {
+        name: editCourse.name,
+        code: editCourse.code,
+        description: editCourse.description,
+        schedule: {
+          day: editCourse.schedule.day,
+          startTime: editCourse.schedule.startTime,
+          endTime: editCourse.schedule.endTime,
+        },
+        lectureMaterials: editCourse.lectureMaterials, // Pass updated materials
+      };
+
+      // If there are new files, use FormData
+      if (editUploadedFiles.length > 0) {
+        const formData = new FormData();
+
+        // Append course data
+        Object.entries(updatePayload).forEach(([key, value]) => {
+          if (key === 'schedule') {
+            Object.entries(value as Record<string, string>).forEach(([subKey, subValue]) => {
+              formData.append(`schedule[${subKey}]`, subValue);
+            });
+          } else if (key === 'lectureMaterials') {
+            (value as string[]).forEach(material => formData.append('lectureMaterials', material));
+          } else {
+            formData.append(key, value as string);
+          }
+        });
+
+        // Append new files
+        editUploadedFiles.forEach(file => {
+          formData.append('lectureMaterials', file);
+        });
+
+        await axios.put(
+          `${config.apiUrl}/api/courses/${courseToEdit._id}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${Cookies.get('token')}`,
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+      } else {
+        // No new files, use JSON payload
+        await axios.put(
+          `${config.apiUrl}/api/courses/${courseToEdit._id}`,
+          updatePayload,
+          {
+            headers: {
+              Authorization: `Bearer ${Cookies.get('token')}`,
+            },
+          }
+        );
+      }
+
+      setEditSuccess(true);
+
+      // Refresh courses list
+      fetchCourses();
+
+      // Close modal after delay
+      setTimeout(() => {
+        setEditModalOpen(false);
+        setCourseToEdit(null);
+        setEditSuccess(false);
+      }, 2000);
+    } catch (err: any) {
+      console.error('Error updating course:', err);
+      setEditError(err.response?.data?.message || 'Failed to update course. Please try again.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+
 };
   export default Courses;
