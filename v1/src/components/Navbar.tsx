@@ -5,6 +5,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Box } from '@mui/system';
 import Cookies from 'js-cookie';
 import ThemeToggle from './ThemeToggle';
@@ -106,6 +107,10 @@ const Navbar: React.FC = () => {
     navigate('/');
   };
 
+  const navigateToNotifications = () => {
+    navigate('/notifications');
+  };
+
   return (
     <>
       <AppBar position="fixed" className="bg-primary">
@@ -120,6 +125,17 @@ const Navbar: React.FC = () => {
           </Typography>
           
           <ThemeToggle currentTheme={theme} toggleTheme={toggleTheme} />
+          
+          {isLoggedIn && (
+            <IconButton 
+              color="inherit" 
+              onClick={navigateToNotifications}
+              className="mx-2"
+              aria-label="notifications"
+            >
+              <NotificationsIcon className="text-white hover:text-amber-300 transition-colors" />
+            </IconButton>
+          )}
           
           {isLoggedIn ? (
             <>
@@ -142,7 +158,7 @@ const Navbar: React.FC = () => {
               >
                 <MenuItem component={Link} to="/account" onClick={handleMenuClose} className="hover:bg-base-200">
                   <ListItemIcon className='text-red-500'>
-                    <span className='text-blue-600'><AccountCircleIcon fontSize="small" className="text-c" /></span>
+                    <span className='text-blue-600'><AccountCircleIcon fontSize="small" /></span>
                   </ListItemIcon>
                   <span className="text-blue-600">My Account</span>
                 </MenuItem>
