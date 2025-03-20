@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root {
+  /* Light theme (default) variables using Tailwind colors */
+  --bg-color: theme('colors.white');
+  --bg-secondary: theme('colors.gray.100');
+  --text-primary: theme('colors.gray.800');
+  --text-secondary: theme('colors.gray.600');
+  --border-color: theme('colors.gray.200');
+  --accent-color: theme('colors.blue.600');
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --card-bg: theme('colors.white');
+  --navbar-bg: theme('colors.blue.700');
+  --navbar-text: theme('colors.white');
+  --footer-bg: theme('colors.blue.900');
+  --footer-text: theme('colors.white');
+}
+
+[data-theme=dark] {
+  /* Dark theme variables using Tailwind colors */
+  --bg-color: theme('colors.gray.700');
+  --bg-secondary: theme('colors.gray.800');
+  --text-primary: theme('colors.gray.100');
+  --text-secondary: theme('colors.gray.400');
+  --border-color: theme('colors.gray.700');
+  --accent-color: theme('colors.white');
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --card-bg: theme('colors.gray.800');
+  --navbar-bg: theme('colors.gray.900');
+  --navbar-text: theme('colors.gray.100');
+  --footer-bg: theme('colors.gray.900');
+  --footer-text: theme('colors.gray.100');
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Apply theme styles to MUI components */
+.MuiPaper-root {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+.MuiAppBar-root {
+  background-color: var(--navbar-bg) !important;
+  color: var(--navbar-text) !important;
+}
+
+.MuiCard-root {
+  background-color: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+.MuiButton-contained {
+  background-color: var(--accent-color) !important;
+}
+
+.MuiTextField-root .MuiInputLabel-root {
+  color: var(--text-secondary) !important;
+}
+
+.MuiTextField-root .MuiOutlinedInput-root fieldset {
+  border-color: var(--border-color) !important;
+}
+
+/* Theme toggle button styling */
+.theme-toggle-button {
+  margin-right: 8px;
+  transition: transform 0.3s ease-in-out;
+}
+
+.theme-toggle-button:hover {
+  transform: rotate(30deg);
+}
