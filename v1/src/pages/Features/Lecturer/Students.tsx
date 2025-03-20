@@ -4,17 +4,41 @@ import Cookies from 'js-cookie';
 import config from '../../../config';
 import { motion } from 'framer-motion';
 import { 
-  Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TablePagination, Chip, IconButton, Box, Modal, Card, CardContent, TextField, Divider,
-  Avatar, CircularProgress, Alert, InputAdornment, Tooltip, TableSortLabel
+  Typography, 
+  Paper, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow,
+  TablePagination,
+  Chip,
+  IconButton,
+  Box,
+  Modal,
+  Card,
+  CardContent,
+  TextField,
+  Divider,
+  Avatar,
+  CircularProgress,
+  Alert,
+  InputAdornment,
+  Tooltip,
+  TableSortLabel
 } from '@mui/material';
-
 import { 
-  Visibility as VisibilityIcon, Person as PersonIcon, Email as EmailIcon, Badge as BadgeIcon,
-  School as SchoolIcon, AccessTime as AccessTimeIcon, Search as SearchIcon, Clear as ClearIcon,
+  Visibility as VisibilityIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Badge as BadgeIcon,
+  School as SchoolIcon,
+  AccessTime as AccessTimeIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-
 interface User {
     _id: string;
     id: string;
@@ -53,3 +77,38 @@ interface User {
   
   const [searchType, setSearchType] = useState<'id' | 'name'>('id');
   
+
+  const fetchUsers = async (showRefreshAnimation = false) => {
+    if (showRefreshAnimation) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
+    try {
+      const response = await axios.get(`${config.apiUrl}/api/users/student`, {
+        headers: { Authorization: `Bearer ${Cookies.get('token')}` }
+      });
+      setUsers(response.data);
+      setError(null);
+      setLastRefreshTime(new Date());
+      if (showRefreshAnimation && searchPerformed) {
+        setSearchPerformed(false);
+        setSearchQuery('');
+        setSearchError(null);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to collect student details.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+};
+
+export default Students;
