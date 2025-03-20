@@ -136,7 +136,7 @@ const handleRequestSort = (field: SortField) => {
     } finally {
       setSearchLoading(false);
     }
-  };
+
   
 <TextField
   fullWidth
@@ -159,5 +159,24 @@ const handleRequestSort = (field: SortField) => {
     ),
   }}
 />
+<Modal open={viewModalOpen} onClose={() => setViewModalOpen(false)}>
+  <div className="bg-white w-full max-w-lg p-6 m-auto rounded-md shadow-lg">
+    {selectedUser && (
+      <Card>
+        <CardContent>
+          <Typography variant="h6">{selectedUser.name}</Typography>
+          <Typography variant="body2">ID: {selectedUser.id}</Typography>
+          <Typography variant="body2">Email: {selectedUser.email}</Typography>
+          <Typography variant="body2">Courses Enrolled: {selectedUser.courses.length || 'None'}</Typography>
+          <Button onClick={() => setViewModalOpen(false)}>Close</Button>
+        </CardContent>
+      </Card>
+    )}
+  </div>
+</Modal>
+
+
+
+};
 
 export default Students;
