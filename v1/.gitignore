@@ -25,6 +25,6 @@ dist-ssr
 *.sw?
 
 # Additional ignored folder
-src/pages/Features/Lecturer/*
+
 
 # Additional ignored folder
