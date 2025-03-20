@@ -834,6 +834,118 @@ const Courses = () => {
     }
   };
 
+  <TableContainer>
+  <Table>
+    <TableHead className="bg-gray-100">
+      <TableRow>
+        <TableCell className="font-medium">
+          <TableSortLabel
+            active={sortField === 'name'}
+            direction={sortField === 'name' ? sortOrder : 'asc'}
+            onClick={() => handleRequestSort('name')}
+          >
+            Course Name
+          </TableSortLabel>
+        </TableCell>
+        <TableCell className="font-medium">
+          <TableSortLabel
+            active={sortField === 'code'}
+            direction={sortField === 'code' ? sortOrder : 'asc'}
+            onClick={() => handleRequestSort('code')}
+          >
+            Code
+          </TableSortLabel>
+        </TableCell>
+        <TableCell className="font-medium">
+          <TableSortLabel
+            active={sortField === 'instructor'}
+            direction={sortField === 'instructor' ? sortOrder : 'asc'}
+            onClick={() => handleRequestSort('instructor')}
+          >
+            Instructor
+          </TableSortLabel>
+        </TableCell>
+        <TableCell className="font-medium">Schedule</TableCell>
+        <TableCell className="font-medium">
+          <TableSortLabel
+            active={sortField === 'createdAt'}
+            direction={sortField === 'createdAt' ? sortOrder : 'asc'}
+            onClick={() => handleRequestSort('createdAt')}
+          >
+            Created At
+          </TableSortLabel>
+        </TableCell>
+        <TableCell className="font-medium">Actions</TableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {sortedCourses
+        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+        .map((course) => {
+          const inSession = isCurrentlyInSession(course);
+          return (
+            <TableRow 
+              key={course._id} 
+              hover
+              sx={{
+                backgroundColor: inSession ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 152, 0, 0.1)',
+                '&:hover': {
+                  backgroundColor: inSession ? 'rgba(76, 175, 80, 0.3)' : 'rgba(255, 152, 0, 0.2)',
+                }
+              }}
+            >
+              <TableCell><span className='dark:text-white text-black'>{course.name}</span></TableCell>
+              <TableCell><span className='dark:text-white text-black'>{course.code}</span></TableCell>
+              <TableCell><span className='dark:text-white text-black'>{course.instructor.name}</span></TableCell>
+              <TableCell>
+                <Chip
+                  label={`${course.schedule.day}, ${course.schedule.startTime} - ${course.schedule.endTime}`}
+                  size="small"
+                  color={inSession ? "success" : "warning"}
+                />
+              </TableCell>
+              <TableCell><span className='dark:text-white text-black'>{new Date(course.createdAt).toLocaleDateString()}</span></TableCell>
+              <TableCell>
+                <Box display="flex">
+                  <IconButton 
+                    size="small" 
+                    color="primary"
+                    onClick={() => handleViewCourse(course)}
+                  >
+                    <VisibilityIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton 
+                    size="small" 
+                    color="secondary"
+                    onClick={() => handleOpenEditModal(course)}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton 
+                    size="small" 
+                    color="error"
+                    onClick={() => handleDeleteConfirmation(course)}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      {courses.length === 0 && (
+        <TableRow>
+          <TableCell colSpan={6} align="center" className="py-8">
+            <Typography variant="body1" color="textSecondary">
+              No courses found
+            </Typography>
+          </TableCell>
+        </TableRow>
+      )}
+    </TableBody>
+  </Table>
+</TableContainer>
 
 };
+
   export default Courses;
