@@ -998,6 +998,20 @@ const Courses = () => {
   </div>
 </Modal>
 
+{/* Delete Confirmation Modal */}
+<Modal open={deleteModalOpen} onClose={() => !deleteLoading && setDeleteModalOpen(false)}>
+  <div className="bg-white w-full max-w-md p-6 m-auto rounded-md shadow-lg">
+    <Card>
+      <CardContent>
+        <Typography variant="h6" color="error">Delete Course</Typography>
+        <Typography variant="body1">Are you sure you want to delete {courseToDelete?.name}?</Typography>
+        <Button onClick={() => setDeleteModalOpen(false)}>Cancel</Button>
+        <Button variant="contained" color="error" onClick={handleDeleteCourse}>Delete</Button>
+      </CardContent>
+    </Card>
+  </div>
+</Modal>
+
 
 };
 
