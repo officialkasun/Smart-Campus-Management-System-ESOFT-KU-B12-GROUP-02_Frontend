@@ -116,6 +116,11 @@ const Resources = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
 
+  // Add state for delete confirmation modal
+  const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
+  const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+
   // Fetch resources function
   const fetchResources = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
@@ -425,6 +430,53 @@ const Resources = () => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
+  // Function to handle delete button click
+  const handleDeleteClick = (resource: Resource) => {
+    setResourceToDelete(resource);
+    setDeleteModalOpen(true);
+  };
+
+  // Function to execute resource deletion
+  const handleDeleteResource = async () => {
+    if (!resourceToDelete) return;
+    
+    setDeleteLoading(true);
+    setUpdateError(null);
+    
+    try {
+      await axios.delete(`${config.apiUrl}/api/resources/${resourceToDelete._id}`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      
+      // Remove the resource from the resources array
+      setResources(resources.filter(resource => resource._id !== resourceToDelete._id));
+      
+      // Show success message
+      setSuccessMessage('Resource deleted successfully!');
+      
+      // Close the view modal if open (when deleting from view modal)
+      if (viewModalOpen && selectedResource?._id === resourceToDelete._id) {
+        setTimeout(() => {
+          setViewModalOpen(false);
+        }, 1500);
+      }
+      
+      // Close delete modal after a short delay
+      setTimeout(() => {
+        setDeleteModalOpen(false);
+        setResourceToDelete(null);
+        setSuccessMessage(null);
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error deleting resource:', err);
+      setUpdateError(err.response?.data?.message || 'Failed to delete resource.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -669,6 +721,7 @@ const Resources = () => {
                             <IconButton 
                               size="small" 
                               color="error"
+                              onClick={() => handleDeleteClick(resource)}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -811,7 +864,15 @@ const Resources = () => {
                   </div>
                 </div>
 
-                <Box mt={4} display="flex" justifyContent="flex-end">
+                <Box mt={4} display="flex" justifyContent="space-between">
+                  <Button 
+                    onClick={() => handleDeleteClick(selectedResource)}
+                    variant="contained" 
+                    color="error"
+                    startIcon={<DeleteIcon />}
+                  >
+                    Delete Resource
+                  </Button>
                   <Button 
                     onClick={() => setViewModalOpen(false)} 
                     variant="contained"
@@ -974,6 +1035,66 @@ const Resources = () => {
               </Button>
             </Box>
           </form>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => {
+          if (!deleteLoading) {
+            setDeleteModalOpen(false);
+            setUpdateError(null);
+            setSuccessMessage(null);
+          }
+        }}
+        aria-labelledby="delete-confirmation-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <Typography variant="h6" className="font-bold mb-4">
+            Confirm Delete
+          </Typography>
+          
+          {successMessage && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'success.light', borderRadius: 1 }}>
+              <Typography color="success.contrastText">{successMessage}</Typography>
+            </Box>
+          )}
+          
+          {updateError && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+              <Typography color="error.contrastText">{updateError}</Typography>
+            </Box>
+          )}
+          
+          {!successMessage && !updateError && (
+            <>
+              <Typography variant="body1" className="mb-4">
+                Are you sure you want to delete the resource <strong>{resourceToDelete?.name}</strong>?
+                This action cannot be undone.
+              </Typography>
+              
+              <Box display="flex" gap={2} justifyContent="flex-end">
+                <Button 
+                  variant="outlined" 
+                  color="primary"
+                  onClick={() => setDeleteModalOpen(false)}
+                  disabled={deleteLoading}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="contained" 
+                  color="error"
+                  onClick={handleDeleteResource}
+                  disabled={deleteLoading}
+                  startIcon={deleteLoading ? <CircularProgress size={20} color="inherit" /> : <DeleteIcon />}
+                >
+                  {deleteLoading ? "Deleting..." : "Delete"}
+                </Button>
+              </Box>
+            </>
+          )}
         </div>
       </Modal>
     </motion.div>
