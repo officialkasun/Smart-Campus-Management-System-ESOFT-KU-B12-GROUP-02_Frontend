@@ -3,6 +3,11 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import config from '../../../config';
 import { motion } from 'framer-motion';
+// Add date picker imports
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import dayjs from 'dayjs';
 import {
   Typography,
   Paper,
@@ -47,6 +52,7 @@ import {
   EventAvailable as EventAvailableIcon,
   EventBusy as EventBusyIcon,
   Add as AddIcon,
+  Event as EventIcon,
 } from '@mui/icons-material';
 
 // Define Resource interface based on actual API response
@@ -120,6 +126,13 @@ const Resources = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [resourceToDelete, setResourceToDelete] = useState<Resource | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+
+  // State for reservation modal
+  const [reserveModalOpen, setReserveModalOpen] = useState<boolean>(false);
+  const [resourceToReserve, setResourceToReserve] = useState<Resource | null>(null);
+  const [reservationDateTime, setReservationDateTime] = useState<dayjs.Dayjs | null>(dayjs().add(1, 'hour'));
+  const [reservationLoading, setReservationLoading] = useState<boolean>(false);
+  const [reservationError, setReservationError] = useState<string | null>(null);
 
   // Fetch resources function
   const fetchResources = async (showRefreshAnimation = false) => {
@@ -474,6 +487,77 @@ const Resources = () => {
       setUpdateError(err.response?.data?.message || 'Failed to delete resource.');
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  // Function to handle reserve button click
+  const handleReserveClick = (resource: Resource) => {
+    if (!resource.availability) {
+      setUpdateError("This resource is already reserved.");
+      return;
+    }
+    
+    setResourceToReserve(resource);
+    setReservationDateTime(dayjs().add(1, 'hour')); // Default to 1 hour from now
+    setReserveModalOpen(true);
+    setReservationError(null);
+  };
+  
+  // Function to handle reservation submission
+  const handleReserveResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resourceToReserve || !reservationDateTime) {
+      setReservationError("Please select a valid date and time for reservation.");
+      return;
+    }
+    
+    // Ensure the reservation time is in the future
+    if (reservationDateTime.isBefore(dayjs())) {
+      setReservationError("Reservation time must be in the future.");
+      return;
+    }
+    
+    setReservationLoading(true);
+    setReservationError(null);
+    
+    try {
+      const response = await axios.post(
+        `${config.apiUrl}/api/resources/${resourceToReserve._id}/reserve`, 
+        {
+          reservationDate: reservationDateTime.toISOString()
+        }, 
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`,
+          },
+        }
+      );
+      
+      // Update the resource in the local state
+      setResources(resources.map(resource => 
+        resource._id === resourceToReserve._id ? response.data : resource
+      ));
+      
+      // If the selected resource in view modal is the one being reserved, update it
+      if (selectedResource && selectedResource._id === resourceToReserve._id) {
+        setSelectedResource(response.data);
+      }
+      
+      // Show success message
+      setSuccessMessage('Resource reserved successfully!');
+      
+      // Close reservation modal after a short delay
+      setTimeout(() => {
+        setReserveModalOpen(false);
+        setResourceToReserve(null);
+        setSuccessMessage(null);
+      }, 1500);
+    } catch (err: any) {
+      console.error('Error reserving resource:', err);
+      setReservationError(err.response?.data?.message || 'Failed to reserve resource.');
+    } finally {
+      setReservationLoading(false);
     }
   };
 
@@ -865,17 +949,29 @@ const Resources = () => {
                 </div>
 
                 <Box mt={4} display="flex" justifyContent="space-between">
-                  <Button 
-                    onClick={() => handleDeleteClick(selectedResource)}
-                    variant="contained" 
-                    color="error"
-                    startIcon={<DeleteIcon />}
-                  >
-                    Delete Resource
-                  </Button>
+                  <Box display="flex" gap={2}>
+                    <Button 
+                      onClick={() => handleDeleteClick(selectedResource)}
+                      variant="contained" 
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                    >
+                      Delete
+                    </Button>
+                    {selectedResource.availability && (
+                      <Button 
+                        onClick={() => handleReserveClick(selectedResource)}
+                        variant="contained" 
+                        color="success"
+                        startIcon={<EventIcon />}
+                      >
+                        Reserve
+                      </Button>
+                    )}
+                  </Box>
                   <Button 
                     onClick={() => setViewModalOpen(false)} 
-                    variant="contained"
+                    variant="outlined"
                   >
                     Close
                   </Button>
@@ -1093,6 +1189,78 @@ const Resources = () => {
                   {deleteLoading ? "Deleting..." : "Delete"}
                 </Button>
               </Box>
+            </>
+          )}
+        </div>
+      </Modal>
+
+      {/* Reservation Modal */}
+      <Modal
+        open={reserveModalOpen}
+        onClose={() => {
+          if (!reservationLoading) {
+            setReserveModalOpen(false);
+            setReservationError(null);
+            setSuccessMessage(null);
+          }
+        }}
+        aria-labelledby="reserve-resource-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <Typography variant="h6" className="font-bold mb-4">
+            Reserve Resource
+          </Typography>
+          
+          {successMessage && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'success.light', borderRadius: 1 }}>
+              <Typography color="success.contrastText">{successMessage}</Typography>
+            </Box>
+          )}
+          
+          {reservationError && (
+            <Box sx={{ mb: 2, p: 1, bgcolor: 'error.light', borderRadius: 1 }}>
+              <Typography color="error.contrastText">{reservationError}</Typography>
+            </Box>
+          )}
+          
+          {!successMessage && resourceToReserve && (
+            <>
+              <Typography variant="body1" className="mb-4">
+                You are about to reserve <strong>{resourceToReserve.name}</strong>.
+                Please select when you would like to reserve this resource.
+              </Typography>
+              
+              <form onSubmit={handleReserveResource}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DateTimePicker
+                    label="Reservation Date & Time"
+                    value={reservationDateTime}
+                    onChange={(newValue) => setReservationDateTime(newValue)}
+                    disablePast
+                    sx={{ width: '100%', mb: 3 }}
+                  />
+                </LocalizationProvider>
+                
+                <Box display="flex" gap={2} justifyContent="flex-end">
+                  <Button 
+                    variant="outlined" 
+                    color="primary"
+                    onClick={() => setReserveModalOpen(false)}
+                    disabled={reservationLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    variant="contained" 
+                    color="success"
+                    disabled={reservationLoading || !reservationDateTime}
+                    startIcon={reservationLoading ? <CircularProgress size={20} color="inherit" /> : <EventIcon />}
+                  >
+                    {reservationLoading ? "Reserving..." : "Confirm Reservation"}
+                  </Button>
+                </Box>
+              </form>
             </>
           )}
         </div>
