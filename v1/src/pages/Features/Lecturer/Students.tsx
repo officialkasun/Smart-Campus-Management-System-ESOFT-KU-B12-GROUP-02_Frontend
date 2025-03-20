@@ -111,4 +111,32 @@ interface User {
 
 };
 
+
+const handleRequestSort = (field: SortField) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
+  };
+  
+  const searchUserById = async () => {
+    if (!searchQuery.trim()) return;
+    
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+    
+    try {
+      const response = await axios.get(`${config.apiUrl}/api/users/student/${searchQuery.trim()}`, {
+        headers: { Authorization: `Bearer ${Cookies.get('token')}` }
+      });
+      setUsers(response.data ? [response.data] : []);
+    } catch {
+      setSearchError('Student not found with the provided ID');
+      setUsers([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+  
+
 export default Students;
