@@ -34,13 +34,10 @@ function App() {
 
           //Kasuns Part
           <Route path="/admin/users" element={<ProtectedRoute element={<Users />} allowedRole="admin" />}  />
-<<<<<<< HEAD
           <Route path="/admin/courses" element={<ProtectedRoute element={<Courses />} allowedRole="admin" />}  />
           <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
           <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
           <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
-=======
->>>>>>> 7becf1c (Enhanced Security #6 : Added protected route for user management - Only admins can access the relevant url)
           //close Kasuns Part
 
 

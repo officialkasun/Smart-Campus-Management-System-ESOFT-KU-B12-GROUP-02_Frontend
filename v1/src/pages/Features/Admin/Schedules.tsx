@@ -49,8 +49,9 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import {
   Visibility as VisibilityIcon,
   Refresh as RefreshIcon,
@@ -166,7 +167,7 @@ const Schedules = () => {
     }
     
     try {
-      const response = await axios.get(`${config.apiUrl}/api/schedules`, {
+      const response = await axios.get(`${config.apiUrl}/api/schedules/event`, {
         headers: {
           Authorization: `Bearer ${Cookies.get('token')}`,
         },
@@ -439,7 +440,7 @@ const Schedules = () => {
   const fetchStudents = async () => {
     setLoadingStudents(true);
     try {
-      const response = await axios.get(`${config.apiUrl}/api/users?role=student`, {
+      const response = await axios.get(`${config.apiUrl}/api/users/student`, {
         headers: {
           Authorization: `Bearer ${Cookies.get('token')}`,
         },
@@ -573,15 +574,15 @@ const Schedules = () => {
     setSubmitError(null);
     
     try {
-      // Create schedule event
+      // Create schedule event - only pass date without time
       await axios.post(
-        `${config.apiUrl}/api/events/event`,
+        `${config.apiUrl}/api/schedules/event`,
         {
           studentId: formData.studentId,
-          event: {
+          events: {
             title: formData.title,
             description: formData.description,
-            date: formData.date,
+            date: formData.date ? new Date(formData.date).toISOString().split('T')[0] : null, // Extract only the date part
             location: formData.location,
             type: formData.type,
           }
@@ -1118,9 +1119,7 @@ const Schedules = () => {
         maxWidth="md"
       >
         <DialogTitle>
-          <Typography variant="h5" className="font-bold">
-            Create New Schedule Event
-          </Typography>
+          Create New Schedule Event
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent dividers>
@@ -1156,16 +1155,17 @@ const Schedules = () => {
                         </Box>
                       </MenuItem>
                     ) : (
-                      <>
-                        <MenuItem value="" disabled>
-                          Select a student
-                        </MenuItem>
-                        {students.map((student) => (
+                      students.length > 0 ? (
+                        students.map((student) => (
                           <MenuItem key={student._id} value={student._id}>
                             {student.name} ({student.email})
                           </MenuItem>
-                        ))}
-                      </>
+                        ))
+                      ) : (
+                        <MenuItem value="" disabled>
+                          No students available
+                        </MenuItem>
+                      )
                     )}
                   </Select>
                   {formErrors.studentId && (
@@ -1225,7 +1225,7 @@ const Schedules = () => {
               </Grid>
               
               <Grid item xs={12} sm={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
                   <DateTimePicker
                     label="Date & Time"
                     value={formData.date}
@@ -1234,7 +1234,7 @@ const Schedules = () => {
                       textField: {
                         fullWidth: true,
                         error: !!formErrors.date,
-                        helperText: formErrors.date,
+                        helperText: formErrors.date || "Only the date will be used, time will be ignored",
                         disabled: submitting,
                       },
                     }}
