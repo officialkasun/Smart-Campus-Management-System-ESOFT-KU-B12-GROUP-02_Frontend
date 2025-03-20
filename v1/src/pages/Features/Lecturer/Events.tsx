@@ -61,6 +61,23 @@ type Order = 'asc' | 'desc';
 // Define sortable fields
 type SortField = 'title' | 'date' | 'location' | 'organizer' | 'attendeesCount' | 'createdAt' | null;
 
+const [events, setEvents] = useState<Event[]>([]);
+const [loading, setLoading] = useState<boolean>(true);
+const [error, setError] = useState<string | null>(null);
+const [page, setPage] = useState<number>(0);
+const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+
+const [sortOrder, setSortOrder] = useState<Order>('asc');
+const [sortField, setSortField] = useState<SortField>('date');
+
+const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+const [viewModalOpen, setViewModalOpen] = useState<boolean>(false);
+
+const [searchQuery, setSearchQuery] = useState<string>('');
+const [searchLoading, setSearchLoading] = useState<boolean>(false);
+const [searchError, setSearchError] = useState<string | null>(null);
+const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+
 };
 
 export default Events;
