@@ -218,3 +218,47 @@ const Courses = () => {
   const [editUploadError, setEditUploadError] = useState<string | null>(null);
   const [removedMaterials, setRemovedMaterials] = useState<string[]>([]);
   const editFileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchCourses = async (showRefreshAnimation = false) => {
+    if (showRefreshAnimation) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
+    try {
+      const response = await axios.get(`${config.apiUrl}/api/courses/lecturer`, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      setCourses(response.data);
+      setError(null);
+      
+      // Update last refresh time
+      setLastRefreshTime(new Date());
+      
+      // Reset search state if this is a manual refresh
+      if (showRefreshAnimation && searchPerformed) {
+        setSearchPerformed(false);
+        setSearchQuery('');
+        setSearchError(null);
+      }
+    } catch (err: any) {
+      console.error('Error fetching courses:', err);
+      setError(err.response?.data?.message || 'Failed to fetch courses.');
+    } finally {
+      if (showRefreshAnimation) {
+        setTimeout(() => setRefreshing(false), 500); // Show refresh animation for at least 500ms
+      } else {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+};
+  export default Courses;
