@@ -968,6 +968,21 @@ const Courses = () => {
   </div>
 </Modal>
 
+{/* Create Course Modal */}
+<Modal open={createModalOpen} onClose={() => !createLoading && setCreateModalOpen(false)}>
+  <div className="bg-white w-full max-w-lg p-6 m-auto rounded-md shadow-lg">
+    <Card>
+      <CardContent>
+        <Typography variant="h6">Create New Course</Typography>
+        {createError && <Alert severity="error">{createError}</Alert>}
+        <TextField fullWidth required label="Course Name" name="name" value={newCourse.name} onChange={handleNewCourseChange} />
+        <TextField fullWidth required label="Course Code" name="code" value={newCourse.code} onChange={handleNewCourseChange} />
+        <Button type="submit" variant="contained" onClick={handleCreateCourse}>Create Course</Button>
+      </CardContent>
+    </Card>
+  </div>
+</Modal>
+
 };
 
 
