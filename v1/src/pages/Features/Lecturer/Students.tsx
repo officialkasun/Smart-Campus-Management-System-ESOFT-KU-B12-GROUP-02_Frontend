@@ -138,5 +138,26 @@ const handleRequestSort = (field: SortField) => {
     }
   };
   
+<TextField
+  fullWidth
+  variant="outlined"
+  placeholder={searchType === 'id' ? "Search student by ID..." : "Search student by name..."}
+  value={searchQuery}
+  onChange={handleSearchChange}
+  InputProps={{
+    startAdornment: (
+      <InputAdornment position="start">
+        <SearchIcon color="action" />
+      </InputAdornment>
+    ),
+    endAdornment: searchQuery && (
+      <InputAdornment position="end">
+        <IconButton onClick={handleClearSearch}>
+          <ClearIcon />
+        </IconButton>
+      </InputAdornment>
+    ),
+  }}
+/>
 
 export default Students;
