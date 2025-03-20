@@ -60,5 +60,5 @@ function App() {
   );
 }
 
-//Managed by Admins
+//Managed by Admin
 export default App;
