@@ -983,7 +983,22 @@ const Courses = () => {
   </div>
 </Modal>
 
-};
+{/* Edit Course Modal */}
+<Modal open={editModalOpen} onClose={() => !editLoading && setEditModalOpen(false)}>
+  <div className="bg-white w-full max-w-lg p-6 m-auto rounded-md shadow-lg">
+    <Card>
+      <CardContent>
+        <Typography variant="h6">Edit Course</Typography>
+        {editError && <Alert severity="error">{editError}</Alert>}
+        <TextField fullWidth required label="Course Name" name="name" value={editCourse.name} onChange={handleEditCourseChange} />
+        <TextField fullWidth required label="Course Code" name="code" value={editCourse.code} onChange={handleEditCourseChange} />
+        <Button type="submit" variant="contained" onClick={handleUpdateCourse}>Update Course</Button>
+      </CardContent>
+    </Card>
+  </div>
+</Modal>
 
+
+};
 
   export default Courses;
