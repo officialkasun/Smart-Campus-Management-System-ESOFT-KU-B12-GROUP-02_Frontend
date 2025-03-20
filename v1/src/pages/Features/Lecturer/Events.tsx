@@ -22,6 +22,45 @@ import {
   PersonAdd as PersonAddIcon, PersonRemove as PersonRemoveIcon,
 } from '@mui/icons-material';
 
+
+// Define Event interface
+interface Event {
+  _id: string;
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  organizer: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  attendees: {
+    _id: string;
+    name: string;
+    email: string;
+  }[];
+  attendeesCount: number;
+  createdAt: string;
+}
+
+// Define interfaces for event actions
+interface NewEvent {
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  organizer: string;
+}
+
+interface EditEvent extends NewEvent {}
+
+// Define sorting order type
+type Order = 'asc' | 'desc';
+
+// Define sortable fields
+type SortField = 'title' | 'date' | 'location' | 'organizer' | 'attendeesCount' | 'createdAt' | null;
+
 };
 
 export default Events;
