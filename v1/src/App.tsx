@@ -15,6 +15,7 @@ import Users from './pages/Features/Admin/Users';
 import Courses from './pages/Features/Admin/Courses';
 import { default as CoursesLecture } from './pages/Features/Lecturer/Courses';
 import { default as EventsLecturer } from './pages/Features/Lecturer/Events';
+import { default as ResourcesLecturer } from './pages/Features/Lecturer/Resources';
 import Events from './pages/Features/Admin/Events';
 import Resources from './pages/Features/Admin/Resources';
 import Students from './pages/Features/Lecturer/Students';
@@ -50,6 +51,7 @@ function App() {
           <Route path="/lecturer/courses" element={<ProtectedRoute element={<CoursesLecture />} allowedRole="lecturer" />} />
           <Route path="/lecturer/students" element={<ProtectedRoute element={<Students />} allowedRole="lecturer" />} />
           <Route path="/lecturer/events" element={<ProtectedRoute element={<EventsLecturer />} allowedRole="lecturer" />} />
+          <Route path="/lecturer/resources" element={<ProtectedRoute element={<ResourcesLecturer />} allowedRole="lecturer" />} />
           //close Dilhans Part
 
           <Route path="/student/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="student" />} />
