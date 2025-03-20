@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  CircularProgress,
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -37,6 +38,7 @@ import {
   Visibility,
   VisibilityOff,
   Lock as LockIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
 
@@ -82,6 +84,8 @@ const getPasswordStrengthColor = (strength: number) => {
 
 const ManageMe = () => {
   const [userData, setUserData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -93,24 +97,94 @@ const ManageMe = () => {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  // New state variables for email update
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Try to get the user cookie using js-cookie library
-    const userCookie = Cookies.get('user');
-    
-    if (userCookie) {
-      try {
-        const parsedUserData = JSON.parse(userCookie);
-        setUserData(parsedUserData);
-        
-        
-        
-      } catch (error) {
-        console.error('Error parsing user cookie:', error);
+    const fetchUserData = async () => {
+      setLoading(true);
+      setError(null);
+
+      // Try to get the user cookie using js-cookie library
+      const userCookie = Cookies.get('user');
+      const token = Cookies.get('token');
+      
+      if (!userCookie || !token) {
+        setLoading(false);
+        return;
       }
-    }
+      
+      try {
+        // First parse cookie to get initial data and the user ID
+        const parsedUserData = JSON.parse(userCookie);
+        
+        // Fetch the latest data from API
+        const response = await axios.get(
+          `${config.apiUrl}/api/users/${parsedUserData.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        // Update user data state with API response
+        const updatedUserData = response.data;
+        setUserData(updatedUserData);
+        
+        // Update the cookie with fresh data
+        Cookies.set('user', JSON.stringify(updatedUserData));
+        
+      } catch (error: any) {
+        console.error('Error fetching user data:', error);
+        setError('Failed to load user data');
+        
+        // If API fails, try to at least show the cookie data
+        if (userCookie) {
+          try {
+            const parsedUserData = JSON.parse(userCookie);
+            setUserData(parsedUserData);
+          } catch (e) {
+            console.error('Error parsing user cookie:', e);
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
   }, []);
+
+  const refreshUserData = async () => {
+    if (!userData?.id) return;
+    
+    setLoading(true);
+    try {
+      const response = await axios.get(
+        `${config.apiUrl}/api/users/${userData.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      const freshUserData = response.data;
+      setUserData(freshUserData);
+      Cookies.set('user', JSON.stringify(freshUserData));
+      setError(null);
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
+      setError('Failed to refresh user data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenPasswordModal = () => {
     setPasswordModalOpen(true);
@@ -224,6 +298,74 @@ const ManageMe = () => {
     setPasswordModalOpen(false);
   };
 
+  const handleOpenEmailModal = () => {
+    setEmailModalOpen(true);
+    // Reset fields when opening modal
+    setNewEmail('');
+    setEmailError('');
+    setEmailSuccess('');
+  };
+
+  const handleCloseEmailModal = () => {
+    setEmailModalOpen(false);
+  };
+
+  const handleSubmitEmailChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setEmailError('');
+    setEmailSuccess('');
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      setEmailError('Please enter a valid email address');
+      return;
+    }
+
+    // Check if new email is the same as current email
+    if (newEmail === userData.email) {
+      setEmailError('New email cannot be the same as your current email');
+      return;
+    }
+
+    try {
+      const response = await axios.put(
+        `${config.apiUrl}/api/users/change-email`, 
+        {
+          newEmail
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      console.log(response.data);
+      
+      setEmailSuccess('Email changed successfully!');
+      
+      // Update user data in state and cookie
+      const updatedUserData = {...userData, email: newEmail};
+      setUserData(updatedUserData);
+      Cookies.set('user', JSON.stringify(updatedUserData));
+      
+      // Clear form field
+      setNewEmail('');
+      
+      // Close modal after success
+      setTimeout(() => {
+        setEmailModalOpen(false);
+      }, 2000);
+      
+    } catch (error: any) {
+      setEmailError(
+        error.response?.data?.message || 
+        'Failed to change email. Please try again.'
+      );
+    }
+  };
+
   return (
     <motion.div 
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -239,7 +381,25 @@ const ManageMe = () => {
         My Account
       </Typography>
 
-      {userData ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center p-8">
+          <CircularProgress />
+          <Typography variant="body1" className="mt-4">
+            Loading your account information...
+          </Typography>
+        </div>
+      ) : error ? (
+        <Alert 
+          severity="error" 
+          action={
+            <Button color="inherit" size="small" onClick={refreshUserData}>
+              <RefreshIcon fontSize="small" className="mr-1" /> Retry
+            </Button>
+          }
+        >
+          {error}
+        </Alert>
+      ) : userData ? (
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <motion.div
@@ -248,6 +408,13 @@ const ManageMe = () => {
             >
               <Card className="shadow-lg">
                 <CardContent className="flex flex-col items-center p-6">
+                  {/* Refresh button */}
+                  <Box className="self-end">
+                    <IconButton onClick={refreshUserData} title="Refresh user data">
+                      <RefreshIcon />
+                    </IconButton>
+                  </Box>
+                  
                   <Avatar 
                     src={userData.profilePic || undefined} 
                     className="w-24 h-24 mb-4 bg-blue-600"
@@ -266,17 +433,20 @@ const ManageMe = () => {
                     className="mt-2" 
                   />
                   
-                  {/* Password Change Button */}
-                  <div className='w-full mt-10 justify-center flex'>
-                  <button 
-                    
-                  
-                    onClick={handleOpenPasswordModal}
-                    className="btn flex flex-row justify-center items-center bg-orange-500 p-3 rounded-3xl shadow-2xl hover:bg-orange-600 hover:scale-105 text-white gap-2 mt-4 cursor-pointer"
-                    
-                  >
-                    <LockIcon /> Change Password
-                  </button>
+                  {/* Account Management Buttons */}
+                  <div className='w-full mt-10 justify-center flex flex-col gap-3'>
+                    <button 
+                      onClick={handleOpenEmailModal}
+                      className="btn flex flex-row justify-center items-center bg-blue-500 p-3 rounded-3xl shadow-2xl hover:bg-blue-600 hover:scale-105 text-white gap-2 cursor-pointer"
+                    >
+                      <EmailIcon /> Update Email
+                    </button>
+                    <button 
+                      onClick={handleOpenPasswordModal}
+                      className="btn flex flex-row justify-center items-center bg-orange-500 p-3 rounded-3xl shadow-2xl hover:bg-orange-600 hover:scale-105 text-white gap-2 cursor-pointer"
+                    >
+                      <LockIcon /> Change Password
+                    </button>
                   </div>
                 </CardContent>
               </Card>
@@ -560,6 +730,78 @@ const ManageMe = () => {
                 >
                 Change Password
                 </button>
+            </Box>
+          </Box>
+        </div>
+      </Modal>
+
+      {/* Email Change Modal */}
+      <Modal
+        open={emailModalOpen}
+        onClose={handleCloseEmailModal}
+        aria-labelledby="email-change-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-md p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+            <span className='font-semibold text-blue-600'>Update Email Address</span>
+          </Typography>
+          
+          {emailError && (
+            <Alert severity="error" sx={{ mb: 2 }}>{emailError}</Alert>
+          )}
+          
+          {emailSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>{emailSuccess}</Alert>
+          )}
+          
+          <Box component="form" onSubmit={handleSubmitEmailChange} sx={{ mt: 1 }}>
+            <TextField
+              margin="normal"
+              fullWidth
+              disabled
+              label="Current Email"
+              value={userData?.email || ''}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailIcon className='dark:text-white' />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="newEmail"
+              label="New Email"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailIcon className='dark:text-white' />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
+              <Button 
+                onClick={handleCloseEmailModal} 
+                variant="outlined"
+              >
+                Cancel
+              </Button>
+              <button 
+                type="submit" 
+                className="btn bg-blue-500 p-3 rounded-3xl shadow-lg hover:bg-blue-600 hover:scale-105 cursor-pointer text-white"
+                disabled={!newEmail || emailSuccess !== ''}
+              >
+                Update Email
+              </button>
             </Box>
           </Box>
         </div>

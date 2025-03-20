@@ -12,6 +12,12 @@ import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import ManageMe from './pages/MyAccount/ManageMe';
+import Users from './pages/Features/Admin/Users';
+import Courses from './pages/Features/Admin/Courses';
+import { default as CoursesLecture } from './pages/Features/Lecturer/Courses';
+import Events from './pages/Features/Admin/Events';
+import Resources from './pages/Features/Admin/Resources';
+import Students from './pages/Features/Lecturer/Students';
 
 function App() {
   return (
@@ -24,10 +30,20 @@ function App() {
           <Route path="/" element={<Home />} />
       
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="admin" />} />
+
+          //Kasuns Part
+          <Route path="/admin/users" element={<ProtectedRoute element={<Users />} allowedRole="admin" />}  />
+          <Route path="/admin/courses" element={<ProtectedRoute element={<Courses />} allowedRole="admin" />}  />
+          <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
+          <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
+          //close Kasuns Part
+
+
           <Route path="/lecturer/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="lecturer" />} />
 
           //Dilhans Part
-          <Route path="/lecturer/courses" element={<Test />} />
+          <Route path="/lecturer/courses" element={<ProtectedRoute element={<CoursesLecture />} allowedRole="lecturer" />} />
+          <Route path="/lecturer/students" element={<ProtectedRoute element={<Students />} allowedRole="lecturer" />} />
           //close Dilhans Part
 
           <Route path="/student/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="student" />} />
@@ -44,4 +60,5 @@ function App() {
   );
 }
 
+//Managed by Admin
 export default App;
