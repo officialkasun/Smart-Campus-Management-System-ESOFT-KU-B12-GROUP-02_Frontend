@@ -5,6 +5,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import SettingsIcon from '@mui/icons-material/Settings';
 import EventIcon from '@mui/icons-material/Event';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import AppsIcon from '@mui/icons-material/Apps';
 
 // Student Icons
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -67,7 +68,15 @@ const navigationConfig: RoleNavConfig = {
       description: 'Create and manage events',
       icon: <EventIcon fontSize="large" className="text-green-800 dark:text-green-600" />,
       path: '/admin/events',
-      action: 'Manage Courses'
+      action: 'Manage Events'
+    },
+    {
+      id: 'resources',
+      title: 'Resource Management',
+      description: 'Create and manage resources',
+      icon: <AppsIcon fontSize="large" className="text-red-800 dark:text-red-600" />,
+      path: '/admin/resources',
+      action: 'Manage Resources'
     },
     {
       id: 'settings',
@@ -96,6 +105,7 @@ const navigationConfig: RoleNavConfig = {
       path: '/student/courses',
       action: 'View Courses'
     },
+    
     {
       id: 'assignments',
       title: 'Assignments',
@@ -140,6 +150,15 @@ const navigationConfig: RoleNavConfig = {
       action: 'Manage Courses'
     },
     {
+      id: 'students',
+      title: 'Students',
+      description: 'Manage your students',
+      icon: <PeopleAltIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
+      
+      path: '/lecturer/students',
+      action: 'Manage Students'
+    },
+    {
       id: 'assignments',
       title: 'Assignments',
       description: 'Create and manage assignments',
@@ -154,14 +173,6 @@ const navigationConfig: RoleNavConfig = {
       icon: <GradeIcon fontSize="large" className="text-green-600 dark:text-green-400" />,
       path: '/lecturer/grading',
       action: 'Grade'
-    },
-    {
-      id: 'students',
-      title: 'Students',
-      description: 'View and manage your students',
-      icon: <PeopleAltIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
-      path: '/lecturer/students',
-      action: 'View Students'
     },
     {
       id: 'esoft',

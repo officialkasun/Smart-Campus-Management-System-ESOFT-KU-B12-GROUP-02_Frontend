@@ -81,7 +81,7 @@ interface Course {
     _id: string;
     name: string;
     email: string;
-  } | null; // Make instructor nullable
+  };
   schedule: {
     day: string;
     startTime: string;
@@ -97,7 +97,6 @@ interface NewCourse {
   name: string;
   code: string;
   description: string;
-  instructor: string;
   schedule: {
     day: string;
     startTime: string;
@@ -111,7 +110,6 @@ interface EditCourse {
   name: string;
   code: string;
   description: string;
-  instructor: string;
   schedule: {
     day: string;
     startTime: string;
@@ -150,7 +148,6 @@ const Courses = () => {
     name: '',
     code: '',
     description: '',
-    instructor: '',
     schedule: {
       day: 'Monday',
       startTime: '',
@@ -161,7 +158,6 @@ const Courses = () => {
     name?: string;
     code?: string;
     description?: string;
-    instructor?: string;
     startTime?: string;
     endTime?: string;
   }>({});
@@ -169,10 +165,6 @@ const Courses = () => {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<boolean>(false);
   
-  // State for instructors (lecturers)
-  const [instructors, setInstructors] = useState<{_id: string, name: string, email: string}[]>([]);
-  const [loadingInstructors, setLoadingInstructors] = useState<boolean>(false);
-
   // State for delete confirmation
   const [deleteModalOpen, setDeleteModalOpen] = useState<boolean>(false);
   const [courseToDelete, setCourseToDelete] = useState<Course | null>(null);
@@ -187,7 +179,6 @@ const Courses = () => {
     name: '',
     code: '',
     description: '',
-    instructor: '',
     schedule: {
       day: 'Monday',
       startTime: '',
@@ -198,7 +189,6 @@ const Courses = () => {
     name?: string;
     code?: string;
     description?: string;
-    instructor?: string;
     startTime?: string;
     endTime?: string;
   }>({});
@@ -237,7 +227,7 @@ const Courses = () => {
     }
     
     try {
-      const response = await axios.get(`${config.apiUrl}/api/courses`, {
+      const response = await axios.get(`${config.apiUrl}/api/courses/lecturer`, {
         headers: {
           Authorization: `Bearer ${Cookies.get('token')}`,
         },
@@ -366,29 +356,6 @@ const Courses = () => {
     return currentTime >= startTime && currentTime <= endTime;
   };
 
-  // Fetch instructors (lecturers)
-  const fetchInstructors = async () => {
-    setLoadingInstructors(true);
-    try {
-      const response = await axios.get(`${config.apiUrl}/api/users/lecturer`, {
-        headers: {
-          Authorization: `Bearer ${Cookies.get('token')}`,
-        },
-      });
-      // Store only relevant instructor data
-      const instructorData = response.data.map((instructor: any) => ({
-        _id: instructor._id,
-        name: instructor.name,
-        email: instructor.email
-      }));
-      setInstructors(instructorData);
-    } catch (err: any) {
-      console.error('Error fetching instructors:', err);
-    } finally {
-      setLoadingInstructors(false);
-    }
-  };
-
   // Handle opening the create course modal
   const handleOpenCreateModal = () => {
     setCreateModalOpen(true);
@@ -396,7 +363,6 @@ const Courses = () => {
       name: '',
       code: '',
       description: '',
-      instructor: '',
       schedule: {
         day: 'Monday',
         startTime: '',
@@ -407,9 +373,6 @@ const Courses = () => {
     setCreateError(null);
     setUploadedFiles([]);
     setUploadError(null);
-    
-    // Fetch instructors when opening the modal
-    fetchInstructors();
   };
 
   // Modify handleNewCourseChange to handle MUI TimePicker changes
@@ -532,7 +495,6 @@ const Courses = () => {
       name?: string;
       code?: string;
       description?: string;
-      instructor?: string;
       startTime?: string;
       endTime?: string;
     } = {};
@@ -547,10 +509,6 @@ const Courses = () => {
     
     if (!newCourse.description.trim()) {
       errors.description = 'Description is required';
-    }
-    
-    if (!newCourse.instructor) {
-      errors.instructor = 'Instructor is required';
     }
     
     if (!newCourse.schedule.startTime.trim()) {
@@ -583,7 +541,6 @@ const Courses = () => {
         formData.append('name', newCourse.name);
         formData.append('code', newCourse.code);
         formData.append('description', newCourse.description);
-        formData.append('instructor', newCourse.instructor);
         formData.append('schedule[day]', newCourse.schedule.day);
         formData.append('schedule[startTime]', newCourse.schedule.startTime);
         formData.append('schedule[endTime]', newCourse.schedule.endTime);
@@ -685,7 +642,6 @@ const Courses = () => {
       name: course.name,
       code: course.code,
       description: course.description,
-      instructor: course.instructor?._id || '', // Safely access instructor ID
       schedule: {
         day: course.schedule.day,
         startTime: course.schedule.startTime,
@@ -699,9 +655,6 @@ const Courses = () => {
     setEditUploadedFiles([]);
     setEditUploadError(null);
     setRemovedMaterials([]);
-    
-    // Fetch instructors when opening the modal
-    fetchInstructors();
   };
 
   // Handle edit course form changes
@@ -767,7 +720,6 @@ const Courses = () => {
       name?: string;
       code?: string;
       description?: string;
-      instructor?: string;
       startTime?: string;
       endTime?: string;
     } = {};
@@ -782,10 +734,6 @@ const Courses = () => {
     
     if (!editCourse.description.trim()) {
       errors.description = 'Description is required';
-    }
-    
-    if (!editCourse.instructor) {
-      errors.instructor = 'Instructor is required';
     }
     
     if (!editCourse.schedule.startTime.trim()) {
@@ -814,7 +762,6 @@ const Courses = () => {
         name: editCourse.name,
         code: editCourse.code,
         description: editCourse.description,
-        instructor: editCourse.instructor,
         schedule: {
           day: editCourse.schedule.day,
           startTime: editCourse.schedule.startTime,
@@ -1224,7 +1171,7 @@ const Courses = () => {
         <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
           <Box>
             <Typography variant="h6" component="div" className="font-semibold">
-              {searchPerformed ? 'Search Results' : 'All Courses'}
+              {searchPerformed ? 'Search Results' : 'My Courses'}
             </Typography>
             {!searchPerformed && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
@@ -1323,11 +1270,7 @@ const Courses = () => {
                       >
                         <TableCell><span className='dark:text-white text-black'>{course.name}</span></TableCell>
                         <TableCell><span className='dark:text-white text-black'>{course.code}</span></TableCell>
-                        <TableCell>
-                          <span className='dark:text-white text-black'>
-                            {course.instructor ? course.instructor.name : 'No instructor assigned'}
-                          </span>
-                        </TableCell>
+                        <TableCell><span className='dark:text-white text-black'>{course.instructor.name}</span></TableCell>
                         <TableCell>
                           <Chip
                             label={`${course.schedule.day}, ${course.schedule.startTime} - ${course.schedule.endTime}`}
@@ -1451,9 +1394,7 @@ const Courses = () => {
                         Instructor
                       </Typography>
                       <Typography variant="body1">
-                        {selectedCourse.instructor 
-                          ? `${selectedCourse.instructor.name} (${selectedCourse.instructor.email})`
-                          : 'No instructor assigned'}
+                        {selectedCourse.instructor.name} ({selectedCourse.instructor.email})
                       </Typography>
                     </div>
                   </div>
@@ -1653,38 +1594,6 @@ const Courses = () => {
                   helperText={validationErrors.description}
                   disabled={createLoading}
                 />
-
-                <FormControl 
-                  fullWidth 
-                  margin="normal"
-                  error={!!validationErrors.instructor}
-                  disabled={createLoading || loadingInstructors}
-                >
-                  <InputLabel id="instructor-select-label">Instructor</InputLabel>
-                  <Select
-                    labelId="instructor-select-label"
-                    name="instructor"
-                    value={newCourse.instructor}
-                    label="Instructor"
-                    onChange={handleNewCourseChange as (event: SelectChangeEvent) => void}
-                    startAdornment={
-                      loadingInstructors ? (
-                        <InputAdornment position="start">
-                          <CircularProgress size={20} />
-                        </InputAdornment>
-                      ) : null
-                    }
-                  >
-                    {instructors.map(instructor => (
-                      <MenuItem key={instructor._id} value={instructor._id}>
-                        {instructor.name} ({instructor.email})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {validationErrors.instructor && (
-                    <FormHelperText>{validationErrors.instructor}</FormHelperText>
-                  )}
-                </FormControl>
 
                 <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
                   Schedule
@@ -1898,38 +1807,6 @@ const Courses = () => {
                   helperText={editValidationErrors.description}
                   disabled={editLoading}
                 />
-
-                <FormControl 
-                  fullWidth 
-                  margin="normal"
-                  error={!!editValidationErrors.instructor}
-                  disabled={editLoading || loadingInstructors}
-                >
-                  <InputLabel id="edit-instructor-select-label">Instructor</InputLabel>
-                  <Select
-                    labelId="edit-instructor-select-label"
-                    name="instructor"
-                    value={editCourse.instructor}
-                    label="Instructor"
-                    onChange={handleEditCourseChange as (event: SelectChangeEvent) => void}
-                    startAdornment={
-                      loadingInstructors ? (
-                        <InputAdornment position="start">
-                          <CircularProgress size={20} />
-                        </InputAdornment>
-                      ) : null
-                    }
-                  >
-                    {instructors.map(instructor => (
-                      <MenuItem key={instructor._id} value={instructor._id}>
-                        {instructor.name} ({instructor.email})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  {editValidationErrors.instructor && (
-                    <FormHelperText>{editValidationErrors.instructor}</FormHelperText>
-                  )}
-                </FormControl>
 
                 <Typography variant="subtitle1" sx={{ mt: 2, mb: 1 }}>
                   Schedule
@@ -2236,5 +2113,4 @@ const Courses = () => {
   );
 };
 
-//Done
 export default Courses;

@@ -33,4 +33,10 @@ function TestKasun() {
   );
 }
 
+<<<<<<< Updated upstream:v1/src/pages/TestKasun.tsx
 export default TestKasun;
+=======
+export default Test;
+
+
+>>>>>>> Stashed changes:v1/src/pages/Test.tsx
