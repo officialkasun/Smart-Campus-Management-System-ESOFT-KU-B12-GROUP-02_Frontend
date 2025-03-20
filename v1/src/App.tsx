@@ -20,6 +20,7 @@ import Resources from './pages/Features/Admin/Resources';
 import Students from './pages/Features/Lecturer/Students';
 import Schedules from './pages/Features/Admin/Schedules';
 import Analytics from './pages/Features/Admin/Analytics';
+import Notifications from './pages/MyAccount/Notifications';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
 
           <Route path="/student/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="student" />} />
           <Route path="/account"  element={<ProtectedRoute element={<ManageMe />} allowedRole="" />}/>
+          <Route path="/notifications"  element={<ProtectedRoute element={<Notifications />} allowedRole="" />}/>
           <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
