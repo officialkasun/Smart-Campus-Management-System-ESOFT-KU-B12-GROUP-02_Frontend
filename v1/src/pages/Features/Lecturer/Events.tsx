@@ -80,4 +80,52 @@ const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
 
 };
 
+const filteredEvents = React.useMemo(() => {
+  if (!searchQuery) return events;
+  return events.filter(event =>
+    event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    event.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    event.organizer.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+}, [events, searchQuery]);
+
+const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  setSearchQuery(e.target.value);
+};
+
+
+<TextField
+  fullWidth
+  variant="outlined"
+  placeholder="Search events by title, location, or organizer..."
+  value={searchQuery}
+  onChange={handleSearchChange}
+  InputProps={{
+    startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment>,
+    endAdornment: searchQuery && (
+      <InputAdornment position="end">
+        <IconButton onClick={() => setSearchQuery('')}>
+          <ClearIcon />
+        </IconButton>
+      </InputAdornment>
+    ),
+  }}
+/>
+
+<Modal open={viewModalOpen} onClose={() => setViewModalOpen(false)}>
+  <div className="bg-white p-6 rounded-md shadow-lg">
+    {selectedEvent && (
+      <Card>
+        <CardContent>
+          <Typography variant="h6">{selectedEvent.title}</Typography>
+          <Typography variant="body2">Date: {new Date(selectedEvent.date).toLocaleDateString()}</Typography>
+          <Typography variant="body2">Location: {selectedEvent.location}</Typography>
+          <Typography variant="body2">Organizer: {selectedEvent.organizer.name}</Typography>
+          <Button onClick={() => setViewModalOpen(false)}>Close</Button>
+        </CardContent>
+      </Card>
+    )}
+  </div>
+</Modal>
+};
 export default Events;
