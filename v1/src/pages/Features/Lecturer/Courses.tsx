@@ -1,34 +1,73 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import axios from 'axios';
+import Cookies from 'js-cookie';
+import config from '../../../config';
+import { motion } from 'framer-motion';
+import {
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  Chip,
+  IconButton,
+  Box,
+  CircularProgress,
+  Tooltip,
+  TableSortLabel,
+  Modal,
+  Card,
+  CardContent,
+  Divider,
+  Button,
+  Avatar,
+  TextField,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  FormHelperText,
+  Alert,
+  LinearProgress,
+  SelectChangeEvent,
+  InputAdornment,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Link,
+  Badge,
+  Grid,
+} from '@mui/material';
+import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import dayjs from 'dayjs';
+import {
+  Visibility as VisibilityIcon,
+  Refresh as RefreshIcon,
+  School as SchoolIcon,
+  AccessTime as AccessTimeIcon,
+  Person as PersonIcon,
+  Description as DescriptionIcon,
+  Code as CodeIcon,
+  Schedule as ScheduleIcon,
+  Group as GroupIcon,
+  Add as AddIcon,
+  Delete as DeleteIcon,
+  Edit as EditIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  Upload as UploadIcon,
+  AttachFile as AttachFileIcon,
+  PictureAsPdf as PdfIcon,
+  InsertDriveFile as DocIcon,
+  Slideshow as PptIcon,
+  Article as TxtIcon,
+} from '@mui/icons-material';
 
-const Courses: React.FC = () => {
-  const [courses, setCourses] = useState([]);
-
-  useEffect(() => {
-    const fetchCourses = async () => {
-      const data = [
-        { id: 1, name: 'Introduction to AI', code: 'AI101', lecturer: 'Dr. Smith' },
-        { id: 2, name: 'Cloud Computing Basics', code: 'CC102', lecturer: 'Prof. Johnson' },
-        { id: 3, name: 'Advanced Algorithms', code: 'AA103', lecturer: 'Dr. Brown' },
-      ];
-      setCourses(data);
-    };
-    fetchCourses();
-  }, []);
-
-  return (
-    <div>
-      <h1>Available Courses</h1>
-      <ul>
-        {courses.map((course) => (
-          <li key={course.id}>
-            <h2>{course.name}</h2>
-            <p>Code: {course.code}</p>
-            <p>Lecturer: {course.lecturer}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-export default Courses;
