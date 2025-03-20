@@ -834,6 +834,102 @@ const Courses = () => {
     }
   };
 
+        {/* Add Search Bar */}
+        <Paper className="shadow-lg mb-4">
+        <Box p={2}>
+          <form onSubmit={handleSearchSubmit}>
+            <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={2} mb={2}>
+              {/* Search type radio buttons */}
+              <FormControl component="fieldset">
+                <Box display="flex" flexDirection="row">
+                  <FormControl component="fieldset">
+                    <Box display="flex" alignItems="center">
+                      <Typography variant="body2" mr={1}>Search by:</Typography>
+                      <Box display="flex" flexDirection="row">
+                        <Box display="flex" alignItems="center" mr={2}>
+                          <input
+                            type="radio"
+                            id="search-code"
+                            name="search-type"
+                            value="code"
+                            checked={searchType === 'code'}
+                            onChange={handleSearchTypeChange}
+                            className="mr-1"
+                          />
+                          <label htmlFor="search-code">Code</label>
+                        </Box>
+                        <Box display="flex" alignItems="center">
+                          <input
+                            type="radio"
+                            id="search-name"
+                            name="search-type"
+                            value="name"
+                            checked={searchType === 'name'}
+                            onChange={handleSearchTypeChange}
+                            className="mr-1"
+                          />
+                          <label htmlFor="search-name">Name</label>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </FormControl>
+                </Box>
+              </FormControl>
+            </Box>
+            
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder={searchType === 'code' ? "Search course by code..." : "Search course by name..."}
+              value={searchQuery}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear search"
+                      onClick={handleClearSearch}
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
+              {searchError && (
+                <Typography color="error" variant="body2">
+                  {searchError}
+                </Typography>
+              )}
+              {searchPerformed && !searchError && courses.length > 0 && (
+                <Typography variant="body2" color="primary">
+                  {courses.length} course{courses.length !== 1 ? 's' : ''} found
+                </Typography>
+              )}
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={searchLoading || !searchQuery.trim()}
+                className="ml-auto"
+                startIcon={searchLoading ? <CircularProgress size={20} /> : <SearchIcon />}
+              >
+                {searchLoading ? 'Searching...' : 'Search'}
+              </Button>
+            </Box>
+          </form>
+        </Box>
+      </Paper>
+
+
+
   <TableContainer>
   <Table>
     <TableHead className="bg-gray-100">
@@ -945,6 +1041,8 @@ const Courses = () => {
     </TableBody>
   </Table>
 </TableContainer>
+
+
 
 
 {/* Course Details Modal */}
