@@ -46,6 +46,7 @@ import {
   Room as RoomIcon,
   EventAvailable as EventAvailableIcon,
   EventBusy as EventBusyIcon,
+  Add as AddIcon,
 } from '@mui/icons-material';
 
 // Define Resource interface based on actual API response
@@ -95,6 +96,13 @@ const Resources = () => {
   
   // State for filtering resources (all vs available)
   const [showOnlyAvailable, setShowOnlyAvailable] = useState<boolean>(false);
+
+  // State for add resource modal
+  const [addModalOpen, setAddModalOpen] = useState<boolean>(false);
+  const [newResource, setNewResource] = useState({
+    name: '',
+    type: 'classroom',
+  });
 
   // Fetch resources function
   const fetchResources = async (showRefreshAnimation = false) => {
@@ -297,13 +305,39 @@ const Resources = () => {
     setShowOnlyAvailable(!showOnlyAvailable);
   };
 
+  // Handle input change for new resource
+  const handleNewResourceChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>) => {
+    const { name, value } = e.target;
+    setNewResource((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle add resource submission
+  const handleAddResource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(`${config.apiUrl}/api/resources`, newResource, {
+        headers: {
+          Authorization: `Bearer ${Cookies.get('token')}`,
+        },
+      });
+      setResources((prev) => [...prev, response.data]);
+      setAddModalOpen(false);
+      setNewResource({ name: '', type: 'classroom' });
+    } catch (err: any) {
+      console.error('Error adding resource:', err);
+      setError(err.response?.data?.message || 'Failed to add resource.');
+    }
+  };
+
   // Get appropriate icon for resource type
   const getResourceTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'classroom':
         return <RoomIcon />;
       case 'lab':
-        return <Inventory />;
+        return <InventoryIcon />;
+      case 'equipment':
+        return <CategoryIcon />;
       default:
         return <CategoryIcon />;
     }
@@ -439,6 +473,17 @@ const Resources = () => {
           </Box>
         </Box>
 
+        <Box display="flex" justifyContent="flex-end" mb={2}>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setAddModalOpen(true)}
+            startIcon={<AddIcon />}
+          >
+            Add Resource
+          </Button>
+        </Box>
+
         {(loading || searchLoading || refreshing) ? (
           <Box p={4} display="flex" justifyContent="center">
             <CircularProgress />
@@ -507,7 +552,7 @@ const Resources = () => {
                           label={capitalizeFirstLetter(resource.type)}
                           size="small"
                           color="primary"
-                          icon={<CategoryIcon />}
+                          icon={getResourceTypeIcon(resource.type)}
                         />
                       </TableCell>
                       <TableCell>
@@ -699,6 +744,54 @@ const Resources = () => {
               </CardContent>
             </Card>
           )}
+        </div>
+      </Modal>
+
+      {/* Add Resource Modal */}
+      <Modal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        aria-labelledby="add-resource-modal"
+      >
+        <div className="bg-white dark:bg-gray-800 w-full max-w-lg p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <Typography variant="h6" className="font-bold mb-4">
+            Add New Resource
+          </Typography>
+          <form onSubmit={handleAddResource}>
+            <TextField
+              fullWidth
+              label="Resource Name"
+              name="name"
+              value={newResource.name}
+              onChange={handleNewResourceChange}
+              variant="outlined"
+              margin="normal"
+              required
+            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel id="resource-type-label">Type</InputLabel>
+              <Select
+                labelId="resource-type-label"
+                id="resource-type"
+                name="type"
+                value={newResource.type}
+                onChange={handleNewResourceChange}
+                required
+              >
+                <MenuItem value="classroom">Classroom</MenuItem>
+                <MenuItem value="equipment">Equipment</MenuItem>
+                <MenuItem value="lab">Lab</MenuItem>
+              </Select>
+            </FormControl>
+            <Box mt={2} display="flex" justifyContent="flex-end">
+              <Button onClick={() => setAddModalOpen(false)} variant="outlined" color="secondary" sx={{ mr: 2 }}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="contained" color="primary">
+                Add
+              </Button>
+            </Box>
+          </form>
         </div>
       </Modal>
     </motion.div>
