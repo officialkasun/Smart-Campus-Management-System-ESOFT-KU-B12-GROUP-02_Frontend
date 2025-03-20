@@ -137,7 +137,11 @@ const handleRequestSort = (field: SortField) => {
       setSearchLoading(false);
     }
 
-  
+<IconButton color="primary" onClick={handleRefresh}>
+  <RefreshIcon />
+</IconButton>
+
+
 <TextField
   fullWidth
   variant="outlined"
