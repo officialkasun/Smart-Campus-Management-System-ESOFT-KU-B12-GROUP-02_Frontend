@@ -5,6 +5,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import SettingsIcon from '@mui/icons-material/Settings';
 import EventIcon from '@mui/icons-material/Event';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import AppsIcon from '@mui/icons-material/Apps';
 
 // Student Icons
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -67,7 +68,15 @@ const navigationConfig: RoleNavConfig = {
       description: 'Create and manage events',
       icon: <EventIcon fontSize="large" className="text-green-800 dark:text-green-600" />,
       path: '/admin/events',
-      action: 'Manage Courses'
+      action: 'Manage Events'
+    },
+    {
+      id: 'resources',
+      title: 'Resource Management',
+      description: 'Create and manage resources',
+      icon: <AppsIcon fontSize="large" className="text-red-800 dark:text-red-600" />,
+      path: '/admin/resources',
+      action: 'Manage Resources'
     },
     {
       id: 'settings',
