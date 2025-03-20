@@ -946,6 +946,29 @@ const Courses = () => {
   </Table>
 </TableContainer>
 
+
+{/* Course Details Modal */}
+<Modal
+  open={viewModalOpen}
+  onClose={() => setViewModalOpen(false)}
+  aria-labelledby="course-details-modal"
+>
+  <div className="bg-white w-full max-w-lg p-6 m-auto rounded-md shadow-lg">
+    {selectedCourse && (
+      <Card>
+        <CardContent>
+          <Typography variant="h6">{selectedCourse.name}</Typography>
+          <Typography variant="body2">Code: {selectedCourse.code}</Typography>
+          <Typography variant="body2">Instructor: {selectedCourse.instructor.name}</Typography>
+          <Typography variant="body2">Schedule: {selectedCourse.schedule.day}, {selectedCourse.schedule.startTime} - {selectedCourse.schedule.endTime}</Typography>
+          <Button onClick={() => setViewModalOpen(false)}>Close</Button>
+        </CardContent>
+      </Card>
+    )}
+  </div>
+</Modal>
+
 };
+
 
   export default Courses;
