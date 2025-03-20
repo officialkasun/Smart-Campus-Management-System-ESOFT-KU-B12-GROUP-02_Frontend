@@ -2,10 +2,10 @@ import React from 'react';
 // Admin Icons
 import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
-import SettingsIcon from '@mui/icons-material/Settings';
 import EventIcon from '@mui/icons-material/Event';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import AppsIcon from '@mui/icons-material/Apps';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 
 // Student Icons
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -79,13 +79,13 @@ const navigationConfig: RoleNavConfig = {
       action: 'Manage Resources'
     },
     {
-      id: 'settings',
-      title: 'System Settings',
-      description: 'Configure system parameters',
-      icon: <SettingsIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
-      path: '/admin/settings',
-      action: 'Settings'
-    }
+      id: 'schedules',
+      title: 'Schedule Management',
+      description: 'Create and manage schedules',
+      icon: <ScheduleIcon fontSize="large" className="text-red-800 dark:text-red-600" />,
+      path: '/admin/schedules',
+      action: 'Manage Schedules'
+    },
   ],
   
   student: [

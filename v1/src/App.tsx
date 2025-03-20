@@ -17,6 +17,7 @@ import { default as CoursesLecture } from './pages/Features/Lecturer/Courses';
 import Events from './pages/Features/Admin/Events';
 import Resources from './pages/Features/Admin/Resources';
 import Students from './pages/Features/Lecturer/Students';
+import Schedules from './pages/Features/Admin/Schedules';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
           <Route path="/admin/courses" element={<ProtectedRoute element={<Courses />} allowedRole="admin" />}  />
           <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
           <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
+          <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
           //close Kasuns Part
 
 
