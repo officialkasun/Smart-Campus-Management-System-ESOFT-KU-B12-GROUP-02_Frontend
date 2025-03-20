@@ -19,6 +19,7 @@ import Events from './pages/Features/Admin/Events';
 import Resources from './pages/Features/Admin/Resources';
 import Students from './pages/Features/Lecturer/Students';
 import Schedules from './pages/Features/Admin/Schedules';
+import Analytics from './pages/Features/Admin/Analytics';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
           <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
           <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
           <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
+          <Route path="/admin/analytics" element={<ProtectedRoute element={<Analytics />} allowedRole="admin" />}  />
           //close Kasuns Part
 
 
