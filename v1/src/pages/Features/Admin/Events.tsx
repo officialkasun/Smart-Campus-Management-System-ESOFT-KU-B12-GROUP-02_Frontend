@@ -27,7 +27,6 @@ import {
   Avatar,
   TextField,
   InputAdornment,
-<<<<<<< HEAD
   FormControl,
   InputLabel,
   MenuItem,
@@ -36,20 +35,13 @@ import {
   Alert,
   LinearProgress,
   SelectChangeEvent,
-=======
-  Alert,
-  LinearProgress,
->>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
   List,
   ListItem,
   ListItemAvatar,
   ListItemButton,
   ListItemText,
   Checkbox,
-<<<<<<< HEAD
   ListItemIcon,
-=======
->>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
 } from '@mui/material';
 import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -119,14 +111,6 @@ interface Student {
   email: string;
 }
 
-// Define User interface for the current user
-interface CurrentUser {
-  _id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
 // Define sorting order type
 type Order = 'asc' | 'desc';
 
@@ -134,9 +118,6 @@ type Order = 'asc' | 'desc';
 type SortField = 'title' | 'date' | 'location' | 'organizer' | 'attendeesCount' | 'createdAt' | null;
 
 const Events = () => {
-  // Add state for current user
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -239,24 +220,6 @@ const Events = () => {
     attendeeName: string 
   } | null>(null);
 
-  // Fetch current user info from cookies instead of making an API call
-  const fetchCurrentUser = () => {
-    try {
-      // Get user data from cookies
-      const userCookie = Cookies.get('user');
-      
-      if (userCookie) {
-        // Parse the JSON data from the cookie
-        const userData = JSON.parse(userCookie);
-        setCurrentUser(userData);
-      } else {
-        console.error('User cookie not found');
-      }
-    } catch (err: any) {
-      console.error('Error parsing user from cookies:', err);
-    }
-  };
-
   // Fetch events function
   const fetchEvents = async (showRefreshAnimation = false) => {
     if (showRefreshAnimation) {
@@ -266,11 +229,6 @@ const Events = () => {
     }
     
     try {
-      // If current user isn't loaded yet, fetch it from cookies
-      if (!currentUser) {
-        fetchCurrentUser();
-      }
-      
       const response = await axios.get(`${config.apiUrl}/api/events/with-attendance`, {
         headers: {
           Authorization: `Bearer ${Cookies.get('token')}`,
@@ -463,22 +421,22 @@ const Events = () => {
     }
   };
 
-  // Handle opening the create event modal - modified to set organizer automatically
+  // Handle opening the create event modal
   const handleOpenCreateModal = () => {
     setCreateModalOpen(true);
-    
-    // Auto-set the organizer to current user's ID
     setNewEvent({
       title: '',
       description: '',
       date: new Date().toISOString(),
       location: '',
-      organizer: currentUser?._id || '', // Set to current user ID
+      organizer: '',
     });
-    
     setValidationErrors({});
     setCreateError(null);
     setCreateSuccess(false);
+    
+    // Fetch organizers when opening the modal
+    fetchOrganizers();
   };
 
   // Handle new event change
@@ -525,13 +483,14 @@ const Events = () => {
     }
   };
 
-  // Validate the form - remove the organizer validation since we're setting it automatically
+  // Validate the form
   const validateForm = (): boolean => {
     const errors: {
       title?: string;
       description?: string;
       date?: string;
       location?: string;
+      organizer?: string;
     } = {};
     
     if (!newEvent.title.trim()) {
@@ -555,7 +514,9 @@ const Events = () => {
       errors.location = 'Location is required';
     }
     
-    // No need to validate organizer as it's auto-set
+    if (!newEvent.organizer) {
+      errors.organizer = 'Organizer is required';
+    }
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -602,11 +563,6 @@ const Events = () => {
 
   // Function to handle delete confirmation
   const handleDeleteConfirmation = (event: Event) => {
-    // Only allow event organizer to delete
-    if (!isEventOrganizer(event)) {
-      return;
-    }
-    
     setEventToDelete(event);
     setDeleteModalOpen(true);
     setDeleteError(null);
@@ -647,13 +603,8 @@ const Events = () => {
     }
   };
 
-  // Handle opening the edit event modal - modified to keep original organizer
+  // Handle opening the edit event modal
   const handleOpenEditModal = (event: Event) => {
-    // Only allow event organizer to edit
-    if (!isEventOrganizer(event)) {
-      return;
-    }
-    
     setEventToEdit(event);
     setEditModalOpen(true);
     setEditEvent({
@@ -661,7 +612,7 @@ const Events = () => {
       description: event.description,
       date: event.date,
       location: event.location,
-      organizer: event.organizer._id, // Keep the original organizer
+      organizer: event.organizer._id,
     });
     setEditValidationErrors({});
     setEditError(null);
@@ -715,13 +666,14 @@ const Events = () => {
     }
   };
 
-  // Validate the edit form - remove the organizer validation
+  // Validate the edit form
   const validateEditForm = (): boolean => {
     const errors: {
       title?: string;
       description?: string;
       date?: string;
       location?: string;
+      organizer?: string;
     } = {};
     
     if (!editEvent.title.trim()) {
@@ -745,7 +697,9 @@ const Events = () => {
       errors.location = 'Location is required';
     }
     
-    // No need to validate organizer as it's kept from original event
+    if (!editEvent.organizer) {
+      errors.organizer = 'Organizer is required';
+    }
     
     setEditValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -813,11 +767,6 @@ const Events = () => {
 
   // Handle opening the attendees management modal
   const handleManageAttendees = (event: Event) => {
-    // Only allow event organizer to manage attendees
-    if (!isEventOrganizer(event)) {
-      return;
-    }
-    
     setSelectedEvent(event);
     setAttendeesModalOpen(true);
     setAttendeesError(null);
@@ -954,11 +903,6 @@ const Events = () => {
   const isStudentAssigned = (studentId: string): boolean => {
     if (!selectedEvent) return false;
     return selectedEvent.attendees.some(attendee => attendee._id === studentId);
-  };
-
-  // Helper function to check if current user is the organizer of an event
-  const isEventOrganizer = (event: Event): boolean => {
-    return currentUser?._id === event.organizer._id;
   };
 
   return (
@@ -1119,8 +1063,6 @@ const Events = () => {
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((event) => {
                     const upcoming = isUpcomingEvent(event.date);
-                    const isOwner = isEventOrganizer(event);
-                    
                     return (
                       <TableRow 
                         key={event._id} 
@@ -1162,32 +1104,24 @@ const Events = () => {
                                 <VisibilityIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
-                            
-                            {/* Only show edit button if current user is the organizer */}
-                            {isOwner && (
-                              <Tooltip title="Edit Event">
-                                <IconButton 
-                                  size="small" 
-                                  color="secondary"
-                                  onClick={() => handleOpenEditModal(event)}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            
-                            {/* Only show delete button if current user is the organizer */}
-                            {isOwner && (
-                              <Tooltip title="Delete Event">
-                                <IconButton 
-                                  size="small" 
-                                  color="error"
-                                  onClick={() => handleDeleteConfirmation(event)}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
+                            <Tooltip title="Edit Event">
+                              <IconButton 
+                                size="small" 
+                                color="secondary"
+                                onClick={() => handleOpenEditModal(event)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete Event">
+                              <IconButton 
+                                size="small" 
+                                color="error"
+                                onClick={() => handleDeleteConfirmation(event)}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                           </Box>
                         </TableCell>
                       </TableRow>
@@ -1295,18 +1229,14 @@ const Events = () => {
                         <Typography variant="body1">
                           {selectedEvent.attendeesCount} {selectedEvent.attendeesCount === 1 ? 'person' : 'people'} attending
                         </Typography>
-                        
-                        {/* Only show Manage button if current user is the organizer */}
-                        {isEventOrganizer(selectedEvent) && (
-                          <Button
-                            size="small"
-                            color="primary"
-                            startIcon={<PersonAddIcon />}
-                            onClick={() => handleManageAttendees(selectedEvent)}
-                          >
-                            Manage
-                          </Button>
-                        )}
+                        <Button
+                          size="small"
+                          color="primary"
+                          startIcon={<PersonAddIcon />}
+                          onClick={() => handleManageAttendees(selectedEvent)}
+                        >
+                          Manage
+                        </Button>
                       </Box>
                       
                       {unassignError && (
@@ -1321,7 +1251,7 @@ const Events = () => {
                         </Alert>
                       )}
                       
-                      {/* Show detailed attendee information with remove option only for event organizer */}
+                      {/* Show detailed attendee information with remove option */}
                       {selectedEvent.attendees && selectedEvent.attendees.length > 0 ? (
                         <Paper variant="outlined" sx={{ p: 1, maxHeight: '200px', overflow: 'auto', mt: 1 }}>
                           <List dense disablePadding>
@@ -1329,21 +1259,19 @@ const Events = () => {
                               <ListItem
                                 key={attendee._id}
                                 secondaryAction={
-                                  isEventOrganizer(selectedEvent) ? (
-                                    unassignLoading === attendee._id ? (
-                                      <CircularProgress size={20} />
-                                    ) : (
-                                      <IconButton 
-                                        edge="end" 
-                                        aria-label="delete" 
-                                        size="small"
-                                        color="error"
-                                        onClick={() => handleOpenRemoveAttendeeModal(selectedEvent._id, attendee._id, attendee.name)}
-                                      >
-                                        <PersonRemoveIcon fontSize="small" />
-                                      </IconButton>
-                                    )
-                                  ) : null  // Don't show remove button for non-organizers
+                                  unassignLoading === attendee._id ? (
+                                    <CircularProgress size={20} />
+                                  ) : (
+                                    <IconButton 
+                                      edge="end" 
+                                      aria-label="delete" 
+                                      size="small"
+                                      color="error"
+                                      onClick={() => handleOpenRemoveAttendeeModal(selectedEvent._id, attendee._id, attendee.name)}
+                                    >
+                                      <PersonRemoveIcon fontSize="small" />
+                                    </IconButton>
+                                  )
                                 }
                                 sx={{
                                   '&:not(:last-child)': {
@@ -1369,9 +1297,7 @@ const Events = () => {
                         </Paper>
                       ) : (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontStyle: 'italic' }}>
-                          {isEventOrganizer(selectedEvent) 
-                            ? "No attendees yet. Use the \"Manage\" button to add students." 
-                            : "No attendees yet."}
+                          No attendees yet. Use the "Manage" button to add students.
                         </Typography>
                       )}
                     </div>
@@ -1409,32 +1335,25 @@ const Events = () => {
 
                 <Box mt={4} display="flex" justifyContent="space-between">
                   <Box display="flex" gap={2}>
-                    {/* Only show delete button if current user is the organizer */}
-                    {isEventOrganizer(selectedEvent) && (
-                      <Button 
-                        onClick={() => handleDeleteConfirmation(selectedEvent)}
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                      >
-                        Delete Event
-                      </Button>
-                    )}
-                    
-                    {/* Only show edit button if current user is the organizer */}
-                    {isEventOrganizer(selectedEvent) && (
-                      <Button 
-                        onClick={() => {
-                          setViewModalOpen(false);
-                          handleOpenEditModal(selectedEvent);
-                        }}
-                        variant="outlined"
-                        color="secondary"
-                        startIcon={<EditIcon />}
-                      >
-                        Edit Event
-                      </Button>
-                    )}
+                    <Button 
+                      onClick={() => handleDeleteConfirmation(selectedEvent)}
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                    >
+                      Delete Event
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        setViewModalOpen(false);
+                        handleOpenEditModal(selectedEvent);
+                      }}
+                      variant="outlined"
+                      color="secondary"
+                      startIcon={<EditIcon />}
+                    >
+                      Edit Event
+                    </Button>
                   </Box>
                   <Button 
                     onClick={() => setViewModalOpen(false)} 
@@ -1449,7 +1368,7 @@ const Events = () => {
         </div>
       </Modal>
 
-      {/* Create Event Modal - modified to remove organizer selection */}
+      {/* Create Event Modal */}
       <Modal
         open={createModalOpen}
         onClose={() => !createLoading && setCreateModalOpen(false)}
@@ -1531,14 +1450,37 @@ const Events = () => {
                   </DemoContainer>
                 </LocalizationProvider>
 
-                {/* Removed organizer selection dropdown */}
-                
-                {/* Display the current organizer as informational text */}
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    You will be listed as the organizer of this event.
-                  </Typography>
-                </Box>
+                <FormControl 
+                  fullWidth 
+                  margin="normal"
+                  error={!!validationErrors.organizer}
+                  disabled={createLoading || loadingOrganizers}
+                >
+                  <InputLabel id="organizer-select-label">Organizer</InputLabel>
+                  <Select
+                    labelId="organizer-select-label"
+                    name="organizer"
+                    value={newEvent.organizer}
+                    label="Organizer"
+                    onChange={handleNewEventChange as (event: SelectChangeEvent) => void}
+                    startAdornment={
+                      loadingOrganizers ? (
+                        <InputAdornment position="start">
+                          <CircularProgress size={20} />
+                        </InputAdornment>
+                      ) : null
+                    }
+                  >
+                    {organizers.map(organizer => (
+                      <MenuItem key={organizer._id} value={organizer._id}>
+                        {organizer.name} ({organizer.email})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {validationErrors.organizer && (
+                    <FormHelperText>{validationErrors.organizer}</FormHelperText>
+                  )}
+                </FormControl>
 
                 {createLoading && (
                   <Box sx={{ width: '100%', mt: 2 }}>
@@ -1629,7 +1571,7 @@ const Events = () => {
         </div>
       </Modal>
 
-      {/* Edit Event Modal - modified to remove organizer selection */}
+      {/* Edit Event Modal */}
       <Modal
         open={editModalOpen}
         onClose={() => !editLoading && setEditModalOpen(false)}
@@ -1711,16 +1653,37 @@ const Events = () => {
                   </DemoContainer>
                 </LocalizationProvider>
 
-                {/* Removed organizer selection dropdown */}
-                
-                {/* Display the current organizer as informational text */}
-                {eventToEdit && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Organizer: {eventToEdit.organizer.name} ({eventToEdit.organizer.email})
-                    </Typography>
-                  </Box>
-                )}
+                <FormControl 
+                  fullWidth 
+                  margin="normal"
+                  error={!!editValidationErrors.organizer}
+                  disabled={editLoading || loadingOrganizers}
+                >
+                  <InputLabel id="edit-organizer-select-label">Organizer</InputLabel>
+                  <Select
+                    labelId="edit-organizer-select-label"
+                    name="organizer"
+                    value={editEvent.organizer}
+                    label="Organizer"
+                    onChange={handleEditEventChange as (event: SelectChangeEvent) => void}
+                    startAdornment={
+                      loadingOrganizers ? (
+                        <InputAdornment position="start">
+                          <CircularProgress size={20} />
+                        </InputAdornment>
+                      ) : null
+                    }
+                  >
+                    {organizers.map(organizer => (
+                      <MenuItem key={organizer._id} value={organizer._id}>
+                        {organizer.name} ({organizer.email})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {editValidationErrors.organizer && (
+                    <FormHelperText>{editValidationErrors.organizer}</FormHelperText>
+                  )}
+                </FormControl>
 
                 {editLoading && (
                   <Box sx={{ width: '100%', mt: 2 }}>
@@ -1938,6 +1901,8 @@ const Events = () => {
                 <Alert severity="error" sx={{ mb: 2 }}>{unassignError}</Alert>
               )}
               
+
+              
               {unassignSuccess ? (
                 <Alert severity="success" sx={{ mb: 2 }}>Attendee removed successfully!</Alert>
               ) : (
@@ -1977,5 +1942,5 @@ const Events = () => {
     </motion.div>
   );
 };
-
+//Done
 export default Events;
