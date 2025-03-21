@@ -68,6 +68,35 @@ const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
 // Always show only available resources
 const [showOnlyAvailable] = useState<boolean>(true);
 
+const fetchResources = async (showRefreshAnimation = false) => {
+  if (showRefreshAnimation) {
+    setRefreshing(true);
+  } else {
+    setLoading(true);
+  }
+
+  try {
+    const response = await axios.get(`${config.apiUrl}/api/resources/${resourceLimit}/available`, {
+      headers: { Authorization: `Bearer ${Cookies.get('token')}` },
+    });
+
+    setResources(response.data);
+    setError(null);
+    setLastRefreshTime(new Date());
+  } catch (err: any) {
+    console.error('Error fetching resources:', err);
+    setError(err.response?.data?.message || 'Failed to fetch resources.');
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
+
+useEffect(() => {
+  fetchResources();
+}, [resourceLimit]);
+
+
 const Resources = () => {
   return (
     <div>Resources</div>
