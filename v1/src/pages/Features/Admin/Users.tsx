@@ -123,7 +123,6 @@ const Users = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
-<<<<<<< HEAD
   // New state variables for search functionality
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchLoading, setSearchLoading] = useState<boolean>(false);
@@ -159,10 +158,6 @@ const Users = () => {
       setLoading(true);
     }
     
-=======
-  const fetchUsers = async () => {
-    setLoading(true);
->>>>>>> dd244d1 (Added Feature #6: Create a functionality to delete a user)
     try {
       const response = await axios.get(`${config.apiUrl}/api/users`, {
         headers: {
