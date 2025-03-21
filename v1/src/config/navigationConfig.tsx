@@ -107,36 +107,19 @@ const navigationConfig: RoleNavConfig = {
       action: 'View'
     },
     {
-      id: 'courses',
-      title: 'My Courses',
-      description: 'Access your enrolled courses',
-      icon: <MenuBookIcon fontSize="large" className="text-blue-600 dark:text-blue-400" />,
-      path: '/student/courses',
-      action: 'View Courses'
-    },
-    
-    {
-      id: 'assignments',
-      title: 'Assignments',
-      description: 'View and submit your assignments',
-      icon: <AssignmentIcon fontSize="large" className="text-orange-600 dark:text-orange-400" />,
-      path: '/student/assignments',
-      action: 'View Assignments'
-    },
-    {
-      id: 'schedule',
-      title: 'Schedule',
-      description: 'Check your class schedule',
-      icon: <EventNoteIcon fontSize="large" className="text-green-600 dark:text-green-400" />,
-      path: '/student/schedule',
-      action: 'View Schedule'
+      id: 'resources',
+      title: 'Resource Management',
+      description: 'Create and manage resources',
+      icon: <AppsIcon fontSize="large" className="text-red-800 dark:text-red-600" />,
+      path: '/student/resources',
+      action: 'Manage Resources'
     },
     {
       id: 'notifications',
       title: 'Notifications',
       description: 'View important announcements',
       icon: <NotificationsIcon fontSize="large" className="text-red-600 dark:text-red-400" />,
-      path: '/student/notifications',
+      path: '/notifications',
       action: 'View Notifications'
     }
   ],

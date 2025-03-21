@@ -16,6 +16,9 @@ import Courses from './pages/Features/Admin/Courses';
 import { default as CoursesLecture } from './pages/Features/Lecturer/Courses';
 import { default as EventsLecturer } from './pages/Features/Lecturer/Events';
 import { default as ResourcesLecturer } from './pages/Features/Lecturer/Resources';
+
+
+import { default as ResourcesStudent } from './pages/Features/Student/Resources';
 import Events from './pages/Features/Admin/Events';
 import Resources from './pages/Features/Admin/Resources';
 import Students from './pages/Features/Lecturer/Students';
@@ -43,6 +46,13 @@ function App() {
           <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
           <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
           <Route path="/admin/analytics" element={<ProtectedRoute element={<Analytics />} allowedRole="admin" />}  />
+
+
+
+          <Route path="/student/resources" element={<ProtectedRoute element={<ResourcesStudent />} allowedRole="student" />}  />
+
+
+
           //close Kasun's Part
 
 
