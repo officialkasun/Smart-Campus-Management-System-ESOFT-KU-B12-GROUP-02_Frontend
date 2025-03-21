@@ -35,7 +35,10 @@ import {
   InputLabel,
   MenuItem,
   Select,
-  LinearProgress
+  LinearProgress,
+  InputAdornment,
+  Tooltip,
+  TableSortLabel
 } from '@mui/material';
 import { 
   Visibility as VisibilityIcon,
@@ -120,8 +123,41 @@ const Users = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  // New state variables for search functionality
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchLoading, setSearchLoading] = useState<boolean>(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchPerformed, setSearchPerformed] = useState<boolean>(false);
+
+  // New state for tracking last refresh time
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  // New state variables for edit user
+  const [editUserData, setEditUserData] = useState<EditUserData>({
+    name: '',
+    email: '',
+    role: ''
+  });
+  const [editUserLoading, setEditUserLoading] = useState<boolean>(false);
+  const [editUserError, setEditUserError] = useState<string | null>(null);
+  const [editUserSuccess, setEditUserSuccess] = useState<string | null>(null);
+  const [editValidationErrors, setEditValidationErrors] = useState<{
+    name?: string;
+    email?: string;
+    role?: string;
+  }>({});
+
+  // New state for search type (ID or name)
+  const [searchType, setSearchType] = useState<'id' | 'name'>('id');
+
+  const fetchUsers = async (showRefreshAnimation = false) => {
+    if (showRefreshAnimation) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
       const response = await axios.get(`${config.apiUrl}/api/users`, {
         headers: {
@@ -395,6 +431,226 @@ const Users = () => {
     }
   };
 
+  // Handle input changes for edit user form
+  const handleEditUserChange = (e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>) => {
+    const { name, value } = e.target;
+    if (name) {
+      setEditUserData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+      
+      // Clear validation error when field is updated
+      if (editValidationErrors[name as keyof typeof editValidationErrors]) {
+        setEditValidationErrors(prev => ({
+          ...prev,
+          [name]: undefined
+        }));
+      }
+    }
+  };
+
+  // Validate edit form
+  const validateEditForm = (): boolean => {
+    const errors: {
+      name?: string;
+      email?: string;
+      role?: string;
+    } = {};
+    
+    // Name validation
+    if (!editUserData.name.trim()) {
+      errors.name = 'Name is required';
+    } else if (editUserData.name.length < 2) {
+      errors.name = 'Name must be at least 2 characters';
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!editUserData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(editUserData.email)) {
+      errors.email = 'Enter a valid email address';
+    }
+    
+    // Role validation
+    if (!editUserData.role) {
+      errors.role = 'Role is required';
+    }
+    
+    setEditValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit user edit
+  const handleSubmitEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedUser) return;
+    if (!validateEditForm()) return;
+    
+    setEditUserLoading(true);
+    setEditUserError(null);
+    setEditUserSuccess(null);
+    
+    try {
+      await axios.put(
+        `${config.apiUrl}/api/users/${selectedUser._id}`,
+        editUserData,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+      
+      setEditUserSuccess('User updated successfully!');
+      setEditUserLoading(false);
+      
+      // Refresh users list
+      fetchUsers();
+      
+      // Close modal after delay
+      setTimeout(() => {
+        setEditModalOpen(false);
+        setEditUserSuccess(null);
+      }, 2000);
+      
+    } catch (err: any) {
+      setEditUserLoading(false);
+      setEditUserError(err.response?.data?.message || 'Failed to update user. Please try again.');
+      console.error('Error updating user:', err);
+    }
+  };
+
+  // Search user by ID
+  const searchUserById = async () => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, reset to show all users
+      setSearchPerformed(false);
+      fetchUsers();
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+
+    // Make API request to search user by ID
+    try { 
+      const response = await axios.get(
+        `${config.apiUrl}/api/users/${searchQuery.trim()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      // If successful, update users state with the single user
+      if (response.data) {
+        setUsers([response.data]);
+      } else {
+        setUsers([]);
+      }
+      setError(null);
+    } catch (err: any) {
+      console.error('Error searching user:', err);
+      setSearchError('User not found with the provided ID');
+      setUsers([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Search user by name
+  const searchUserByName = async () => {
+    if (!searchQuery.trim()) {
+      // If search is cleared, reset to show all users
+      setSearchPerformed(false);
+      fetchUsers();
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchPerformed(true);
+
+    try {
+      const response = await axios.get(
+        `${config.apiUrl}/api/users/name/${searchQuery.trim()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`
+          }
+        }
+      );
+
+      if (response.data && response.data.length > 0) {
+        setUsers(response.data);
+      } else {
+        setUsers([]);
+        setSearchError('No users found with the provided name');
+      }
+    } catch (err: any) {
+      console.error('Error searching user by name:', err);
+      setSearchError('Failed to search for users by name');
+      setUsers([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Handle search form submit - now handles both ID and name search
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchType === 'id') {
+      searchUserById();
+    } else {
+      searchUserByName();
+    }
+  };
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    // Clear search error when input changes
+    if (searchError) {
+      setSearchError(null);
+    }
+  };
+
+  // Handle search type change
+  const handleSearchTypeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchType(e.target.value as 'id' | 'name');
+    // Clear search query and errors when changing search type
+    setSearchQuery('');
+    setSearchError(null);
+  };
+
+  // Clear search and show all users again
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchError(null);
+    setSearchPerformed(false);
+    fetchUsers();
+  };
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    fetchUsers(true);
+  };
+
+  // Format the refresh time in a readable format
+  const formatRefreshTime = (date: Date) => {
+    return date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit',
+      hour12: true 
+    });
+  };
+
   return (
     <motion.div
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -410,22 +666,136 @@ const Users = () => {
         User Management
       </Typography>
 
-      {error && <Alert severity="error" className="mb-4">{error}</Alert>}
+      {error && !searchError && <Alert severity="error" className="mb-4">{error}</Alert>}
+
+      <Paper className="shadow-lg mb-4">
+        <Box p={2}>
+          <form onSubmit={handleSearchSubmit}>
+            <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} gap={2} mb={2}>
+              {/* Search type radio buttons */}
+              <FormControl component="fieldset">
+                <Box display="flex" flexDirection="row">
+                  <FormControl component="fieldset">
+                    <Box display="flex" alignItems="center">
+                      <Typography variant="body2" mr={1}>Search by:</Typography>
+                      <Box display="flex" flexDirection="row">
+                        <Box display="flex" alignItems="center" mr={2}>
+                          <input
+                            type="radio"
+                            id="search-id"
+                            name="search-type"
+                            value="id"
+                            checked={searchType === 'id'}
+                            onChange={handleSearchTypeChange}
+                            className="mr-1"
+                          />
+                          <label htmlFor="search-id">ID</label>
+                        </Box>
+                        <Box display="flex" alignItems="center">
+                          <input
+                            type="radio"
+                            id="search-name"
+                            name="search-type"
+                            value="name"
+                            checked={searchType === 'name'}
+                            onChange={handleSearchTypeChange}
+                            className="mr-1"
+                          />
+                          <label htmlFor="search-name">Name</label>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </FormControl>
+                </Box>
+              </FormControl>
+            </Box>
+            
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder={searchType === 'id' ? "Search user by ID..." : "Search user by name..."}
+              value={searchQuery}
+              onChange={handleSearchChange}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear search"
+                      onClick={handleClearSearch}
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box mt={1} display="flex" justifyContent="space-between" alignItems="center">
+              {searchError && (
+                <Typography color="error" variant="body2">
+                  {searchError}
+                </Typography>
+              )}
+              {searchPerformed && !searchError && users.length > 0 && (
+                <Typography variant="body2" color="primary">
+                  {users.length} user{users.length !== 1 ? 's' : ''} found
+                </Typography>
+              )}
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={searchLoading || !searchQuery.trim()}
+                className="ml-auto"
+                startIcon={searchLoading ? <CircularProgress size={20} /> : <SearchIcon />}
+              >
+                {searchLoading ? 'Searching...' : 'Search'}
+              </Button>
+            </Box>
+          </form>
+        </Box>
+      </Paper>
 
       <Paper className="shadow-lg">
         <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" component="div" className="font-semibold">
-            All Users
-          </Typography>
-          <Button 
-            variant="contained" 
-            color="primary"
-            startIcon={<AddIcon />}
-            className="bg-blue-600 hover:bg-blue-700"
-            onClick={handleOpenAddModal}
-          >
-            Add New User
-          </Button>
+          <Box>
+            <Typography variant="h6" component="div" className="font-semibold">
+              {searchPerformed ? 'Search Results' : 'All Users'}
+            </Typography>
+            {!searchPerformed && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+               <span className='dark:text-gray-400 text-gray-700'> Last updated: {formatRefreshTime(lastRefreshTime)}</span>
+              </Typography>
+            )}
+          </Box>
+          <Box display="flex" gap={2}>
+            <Tooltip title="Refresh data">
+              <span>
+                <IconButton 
+                  color="primary" 
+                  onClick={handleRefresh}
+                  disabled={refreshing || loading}
+                  className={refreshing ? 'animate-spin' : ''}
+                >
+                  <RefreshIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Button 
+              variant="contained" 
+              color="primary"
+              startIcon={<AddIcon />}
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={handleOpenAddModal}
+            >
+              Add New User
+            </Button>
+          </Box>
         </Box>
 
         {(loading || searchLoading || refreshing) ? (
