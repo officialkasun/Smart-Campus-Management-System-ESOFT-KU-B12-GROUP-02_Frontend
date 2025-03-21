@@ -1,15 +1,24 @@
 import React, { useState, useEffect, MouseEvent } from 'react';
+<<<<<<< HEAD
+import { AppBar, Toolbar, Typography, Button, IconButton, Drawer, Avatar, Menu, MenuItem, ListItemIcon } from '@mui/material';
+=======
 import { AppBar, Toolbar, Typography, Button, IconButton, Drawer, Avatar, Menu, MenuItem, ListItemIcon, Badge } from '@mui/material';
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
+<<<<<<< HEAD
+import { Box } from '@mui/system';
+import Cookies from 'js-cookie';
+=======
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Box } from '@mui/system';
 import Cookies from 'js-cookie';
 import axios from 'axios';
 import config from '../config';
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
 import ThemeToggle from './ThemeToggle';
 import { AdminSidebar, StudentSidebar, LecturerSidebar, GuestSidebar } from './Sidebars';
 
@@ -25,8 +34,11 @@ const Navbar: React.FC = () => {
            localStorage.getItem('theme') || 
            'light';
   });
+<<<<<<< HEAD
+=======
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notificationsLoading, setNotificationsLoading] = useState<boolean>(false);
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -79,6 +91,8 @@ const Navbar: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+<<<<<<< HEAD
+=======
   // Function to fetch unread notification count
   const fetchUnreadNotificationCount = async () => {
     if (!isLoggedIn) {
@@ -124,6 +138,7 @@ const Navbar: React.FC = () => {
     return () => clearInterval(interval);
   }, [isLoggedIn]);
 
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
   const toggleDrawer = (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
     if (event.type === 'keydown' && ((event as React.KeyboardEvent).key === 'Tab' || (event as React.KeyboardEvent).key === 'Shift')) {
       return;
@@ -156,11 +171,14 @@ const Navbar: React.FC = () => {
     navigate('/');
   };
 
+<<<<<<< HEAD
+=======
   // Function to navigate to notifications page without resetting count
   const navigateToNotifications = () => {
     navigate('/notifications');
   };
 
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
   return (
     <>
       <AppBar position="fixed" className="bg-primary">
@@ -176,6 +194,8 @@ const Navbar: React.FC = () => {
           
           <ThemeToggle currentTheme={theme} toggleTheme={toggleTheme} />
           
+<<<<<<< HEAD
+=======
           {isLoggedIn && (
             <IconButton 
               color="inherit" 
@@ -202,6 +222,7 @@ const Navbar: React.FC = () => {
             </IconButton>
           )}
           
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
           {isLoggedIn ? (
             <>
               <div className="flex items-center">
@@ -223,7 +244,11 @@ const Navbar: React.FC = () => {
               >
                 <MenuItem component={Link} to="/account" onClick={handleMenuClose} className="hover:bg-base-200">
                   <ListItemIcon className='text-red-500'>
+<<<<<<< HEAD
+                    <span className='text-blue-600'><AccountCircleIcon fontSize="small" className="text-c" /></span>
+=======
                     <span className='text-blue-600'><AccountCircleIcon fontSize="small" /></span>
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
                   </ListItemIcon>
                   <span className="text-blue-600">My Account</span>
                 </MenuItem>

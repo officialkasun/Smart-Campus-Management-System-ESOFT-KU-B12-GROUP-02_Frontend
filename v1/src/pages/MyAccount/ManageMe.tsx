@@ -25,7 +25,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+<<<<<<< HEAD
+=======
   CircularProgress,
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
 } from '@mui/material';
 import { 
   Person as PersonIcon,
@@ -38,7 +41,10 @@ import {
   Visibility,
   VisibilityOff,
   Lock as LockIcon,
+<<<<<<< HEAD
+=======
   Refresh as RefreshIcon,
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
 } from '@mui/icons-material';
 
 
@@ -84,8 +90,11 @@ const getPasswordStrengthColor = (strength: number) => {
 
 const ManageMe = () => {
   const [userData, setUserData] = useState<any>(null);
+<<<<<<< HEAD
+=======
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -97,6 +106,27 @@ const ManageMe = () => {
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+<<<<<<< HEAD
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Try to get the user cookie using js-cookie library
+    const userCookie = Cookies.get('user');
+    
+    if (userCookie) {
+      try {
+        const parsedUserData = JSON.parse(userCookie);
+        setUserData(parsedUserData);
+        
+        
+        
+      } catch (error) {
+        console.error('Error parsing user cookie:', error);
+      }
+    }
+  }, []);
+
+=======
   // New state variables for email update
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -186,6 +216,7 @@ const ManageMe = () => {
     }
   };
 
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
   const handleOpenPasswordModal = () => {
     setPasswordModalOpen(true);
     // Reset fields when opening modal
@@ -298,6 +329,8 @@ const ManageMe = () => {
     setPasswordModalOpen(false);
   };
 
+<<<<<<< HEAD
+=======
   const handleOpenEmailModal = () => {
     setEmailModalOpen(true);
     // Reset fields when opening modal
@@ -366,6 +399,7 @@ const ManageMe = () => {
     }
   };
 
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
   return (
     <motion.div 
       className="p-4 md:p-8 min-h-screen w-full bg-secondary"
@@ -381,6 +415,9 @@ const ManageMe = () => {
         My Account
       </Typography>
 
+<<<<<<< HEAD
+      {userData ? (
+=======
       {loading ? (
         <div className="flex flex-col items-center justify-center p-8">
           <CircularProgress />
@@ -400,6 +437,7 @@ const ManageMe = () => {
           {error}
         </Alert>
       ) : userData ? (
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
         <Grid container spacing={3}>
           <Grid item xs={12} md={4}>
             <motion.div
@@ -408,6 +446,8 @@ const ManageMe = () => {
             >
               <Card className="shadow-lg">
                 <CardContent className="flex flex-col items-center p-6">
+<<<<<<< HEAD
+=======
                   {/* Refresh button */}
                   <Box className="self-end">
                     <IconButton onClick={refreshUserData} title="Refresh user data">
@@ -415,6 +455,7 @@ const ManageMe = () => {
                     </IconButton>
                   </Box>
                   
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
                   <Avatar 
                     src={userData.profilePic || undefined} 
                     className="w-24 h-24 mb-4 bg-blue-600"
@@ -433,6 +474,19 @@ const ManageMe = () => {
                     className="mt-2" 
                   />
                   
+<<<<<<< HEAD
+                  {/* Password Change Button */}
+                  <div className='w-full mt-10 justify-center flex'>
+                  <button 
+                    
+                  
+                    onClick={handleOpenPasswordModal}
+                    className="btn flex flex-row justify-center items-center bg-orange-500 p-3 rounded-3xl shadow-2xl hover:bg-orange-600 hover:scale-105 text-white gap-2 mt-4 cursor-pointer"
+                    
+                  >
+                    <LockIcon /> Change Password
+                  </button>
+=======
                   {/* Account Management Buttons */}
                   <div className='w-full mt-10 justify-center flex flex-col gap-3'>
                     <button 
@@ -447,6 +501,7 @@ const ManageMe = () => {
                     >
                       <LockIcon /> Change Password
                     </button>
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
                   </div>
                 </CardContent>
               </Card>
@@ -735,6 +790,8 @@ const ManageMe = () => {
         </div>
       </Modal>
 
+<<<<<<< HEAD
+=======
       {/* Email Change Modal */}
       <Modal
         open={emailModalOpen}
@@ -807,6 +864,7 @@ const ManageMe = () => {
         </div>
       </Modal>
 
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
       {/* Logout Confirmation Dialog */}
       <Dialog
         open={logoutDialogOpen}

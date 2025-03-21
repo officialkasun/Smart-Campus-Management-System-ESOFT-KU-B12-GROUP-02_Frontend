@@ -25,6 +25,10 @@ dist-ssr
 *.sw?
 
 # Additional ignored folder
+<<<<<<< HEAD
+src/pages/Features/Admin/*
+=======
 
 
 # Additional ignored folder
+>>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
