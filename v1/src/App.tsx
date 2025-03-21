@@ -33,21 +33,23 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
       
-          <Route path="/admin/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="admin" />} />
+        
 
-          //Kasuns Part
+          //Kasun's Part
+          <Route path="/admin/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="admin" />} />
           <Route path="/admin/users" element={<ProtectedRoute element={<Users />} allowedRole="admin" />}  />
           <Route path="/admin/courses" element={<ProtectedRoute element={<Courses />} allowedRole="admin" />}  />
           <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
           <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
           <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
           <Route path="/admin/analytics" element={<ProtectedRoute element={<Analytics />} allowedRole="admin" />}  />
-          //close Kasuns Part
+          //close Kasun's Part
 
 
-          <Route path="/lecturer/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="lecturer" />} />
+  
 
           //Dilhans Part
+          <Route path="/lecturer/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="lecturer" />} />
           <Route path="/lecturer/courses" element={<ProtectedRoute element={<CoursesLecture />} allowedRole="lecturer" />} />
           <Route path="/lecturer/students" element={<ProtectedRoute element={<Students />} allowedRole="lecturer" />} />
           <Route path="/lecturer/events" element={<ProtectedRoute element={<EventsLecturer />} allowedRole="lecturer" />} />
