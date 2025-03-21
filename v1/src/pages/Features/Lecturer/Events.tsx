@@ -65,7 +65,7 @@ import {
   PersonRemove as PersonRemoveIcon,
 } from '@mui/icons-material';
 
-// Define Event Interface
+// Define Event interface
 interface Event {
   _id: string;
   title: string;

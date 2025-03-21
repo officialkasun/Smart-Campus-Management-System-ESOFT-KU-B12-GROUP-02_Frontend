@@ -7,11 +7,11 @@ import Error404 from './pages/Public/Error404';
 import { Container } from '@mui/material';
 import Navbar from './components/Navbar';
 import Login from './pages/Auth/Login';
-import Test from './pages/Features/Lecturer/Test';
 import Footer from './components/Footer';
 import Dashboard from './pages/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import ManageMe from './pages/MyAccount/ManageMe';
+
 
 function App() {
   return (
@@ -24,10 +24,22 @@ function App() {
           <Route path="/" element={<Home />} />
       
           <Route path="/admin/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="admin" />} />
+
+          //Kasuns Part
+          <Route path="/admin/users" element={<ProtectedRoute element={<Users />} allowedRole="admin" />}  />
+          <Route path="/admin/courses" element={<ProtectedRoute element={<Courses />} allowedRole="admin" />}  />
+          <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
+          <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
+          <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
+          //close Kasuns Part
+
+
           <Route path="/lecturer/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="lecturer" />} />
 
           //Dilhans Part
-          <Route path="/lecturer/courses" element={<Test />} />
+          <Route path="/lecturer/courses" element={<ProtectedRoute element={<CoursesLecture />} allowedRole="lecturer" />} />
+          <Route path="/lecturer/students" element={<ProtectedRoute element={<Students />} allowedRole="lecturer" />} />
+          <Route path="/lecturer/events" element={<ProtectedRoute element={<EventsLecturer />} allowedRole="lecturer" />} />
           //close Dilhans Part
 
           <Route path="/student/dashboard" element={<ProtectedRoute element={<Dashboard />} allowedRole="student" />} />
@@ -44,4 +56,5 @@ function App() {
   );
 }
 
+//Managed by Admin
 export default App;

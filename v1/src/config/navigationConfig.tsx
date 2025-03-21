@@ -2,8 +2,10 @@ import React from 'react';
 // Admin Icons
 import PeopleIcon from '@mui/icons-material/People';
 import SchoolIcon from '@mui/icons-material/School';
-import SettingsIcon from '@mui/icons-material/Settings';
+import EventIcon from '@mui/icons-material/Event';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import AppsIcon from '@mui/icons-material/Apps';
+import ScheduleIcon from '@mui/icons-material/Schedule';
 
 // Student Icons
 import MenuBookIcon from '@mui/icons-material/MenuBook';
@@ -61,13 +63,29 @@ const navigationConfig: RoleNavConfig = {
       action: 'Manage Courses'
     },
     {
-      id: 'settings',
-      title: 'System Settings',
-      description: 'Configure system parameters',
-      icon: <SettingsIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
-      path: '/admin/settings',
-      action: 'Settings'
-    }
+      id: 'events',
+      title: 'Event Management',
+      description: 'Create and manage events',
+      icon: <EventIcon fontSize="large" className="text-green-800 dark:text-green-600" />,
+      path: '/admin/events',
+      action: 'Manage Events'
+    },
+    {
+      id: 'resources',
+      title: 'Resource Management',
+      description: 'Create and manage resources',
+      icon: <AppsIcon fontSize="large" className="text-red-800 dark:text-red-600" />,
+      path: '/admin/resources',
+      action: 'Manage Resources'
+    },
+    {
+      id: 'schedules',
+      title: 'Schedule Management',
+      description: 'Create and manage schedules',
+      icon: <ScheduleIcon fontSize="large" className="text-red-800 dark:text-red-600" />,
+      path: '/admin/schedules',
+      action: 'Manage Schedules'
+    },
   ],
   
   student: [
@@ -87,6 +105,7 @@ const navigationConfig: RoleNavConfig = {
       path: '/student/courses',
       action: 'View Courses'
     },
+    
     {
       id: 'assignments',
       title: 'Assignments',
@@ -131,12 +150,21 @@ const navigationConfig: RoleNavConfig = {
       action: 'Manage Courses'
     },
     {
-      id: 'assignments',
-      title: 'Assignments',
-      description: 'Create and manage assignments',
-      icon: <AssignmentIcon fontSize="large" className="text-orange-600 dark:text-orange-400" />,
-      path: '/lecturer/assignments',
-      action: 'Manage Assignments'
+      id: 'students',
+      title: 'Students',
+      description: 'Manage your students',
+      icon: <PeopleAltIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
+      
+      path: '/lecturer/students',
+      action: 'Manage Students'
+    },
+    {
+      id: 'events',
+      title: 'Event Management',
+      description: 'Create and manage events',
+      icon: <EventIcon fontSize="large" className="text-green-800 dark:text-green-600" />,
+      path: '/lecturer/events',
+      action: 'Manage Events'
     },
     {
       id: 'grading',
@@ -145,14 +173,6 @@ const navigationConfig: RoleNavConfig = {
       icon: <GradeIcon fontSize="large" className="text-green-600 dark:text-green-400" />,
       path: '/lecturer/grading',
       action: 'Grade'
-    },
-    {
-      id: 'students',
-      title: 'Students',
-      description: 'View and manage your students',
-      icon: <PeopleAltIcon fontSize="large" className="text-purple-600 dark:text-purple-400" />,
-      path: '/lecturer/students',
-      action: 'View Students'
     },
     {
       id: 'esoft',
