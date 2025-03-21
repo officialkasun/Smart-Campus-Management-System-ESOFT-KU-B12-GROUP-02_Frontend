@@ -13,6 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ManageMe from './pages/MyAccount/ManageMe';
 import Users from './pages/Features/Admin/Users';
 import Courses from './pages/Features/Admin/Courses';
+<<<<<<< HEAD
 import { default as CoursesLecture } from './pages/Features/Lecturer/Courses';
 import { default as EventsLecturer } from './pages/Features/Lecturer/Events';
 import { default as ResourcesLecturer } from './pages/Features/Lecturer/Resources';
@@ -22,6 +23,8 @@ import Students from './pages/Features/Lecturer/Students';
 import Schedules from './pages/Features/Admin/Schedules';
 import Analytics from './pages/Features/Admin/Analytics';
 import Notifications from './pages/MyAccount/Notifications';
+=======
+>>>>>>> d1f8406 (Added Feature #6 : Courses Component and the relevant protected route)
 
 function App() {
   return (
@@ -38,10 +41,13 @@ function App() {
           //Kasuns Part
           <Route path="/admin/users" element={<ProtectedRoute element={<Users />} allowedRole="admin" />}  />
           <Route path="/admin/courses" element={<ProtectedRoute element={<Courses />} allowedRole="admin" />}  />
+<<<<<<< HEAD
           <Route path="/admin/events" element={<ProtectedRoute element={<Events />} allowedRole="admin" />}  />
           <Route path="/admin/resources" element={<ProtectedRoute element={<Resources />} allowedRole="admin" />}  />
           <Route path="/admin/schedules" element={<ProtectedRoute element={<Schedules />} allowedRole="admin" />}  />
           <Route path="/admin/analytics" element={<ProtectedRoute element={<Analytics />} allowedRole="admin" />}  />
+=======
+>>>>>>> d1f8406 (Added Feature #6 : Courses Component and the relevant protected route)
           //close Kasuns Part
 
 
