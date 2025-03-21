@@ -27,29 +27,14 @@ import {
   Avatar,
   TextField,
   InputAdornment,
-<<<<<<< HEAD
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  FormHelperText,
   Alert,
   LinearProgress,
-  SelectChangeEvent,
-=======
-  Alert,
-  LinearProgress,
->>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
   List,
   ListItem,
   ListItemAvatar,
   ListItemButton,
   ListItemText,
   Checkbox,
-<<<<<<< HEAD
-  ListItemIcon,
-=======
->>>>>>> 736b41d16c7c91198e2c045685e27519df7621bd
 } from '@mui/material';
 import { DemoContainer } from '@mui/x-date-pickers/internals/demo';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
