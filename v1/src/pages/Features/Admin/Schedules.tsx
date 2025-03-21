@@ -68,6 +68,7 @@ import {
   Category as OtherIcon,
   Add as AddIcon,
 } from '@mui/icons-material';
+import dayjs, { Dayjs } from 'dayjs'; // Import dayjs
 
 // Define Schedule interface
 interface ScheduleEvent {
@@ -102,7 +103,16 @@ interface CreateEventFormData {
   studentId: string;
   title: string;
   description: string;
-  date: Date | null;
+  date: Dayjs | null; // Change from Date to Dayjs
+  location: string;
+  type: 'class' | 'exam' | 'assignment' | 'other';
+}
+
+// Interface for edit event form data
+interface EditEventFormData {
+  title: string;
+  description: string;
+  date: Dayjs | null; // Change from Date to Dayjs
   location: string;
   type: 'class' | 'exam' | 'assignment' | 'other';
 }
@@ -171,6 +181,21 @@ const Schedules = () => {
   const [deleteScheduleLoading, setDeleteScheduleLoading] = useState<boolean>(false);
   const [deleteScheduleSuccess, setDeleteScheduleSuccess] = useState<boolean>(false);
   const [deleteScheduleError, setDeleteScheduleError] = useState<string | null>(null);
+
+  // State for edit event modal
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [editFormData, setEditFormData] = useState<EditEventFormData>({
+    title: '',
+    description: '',
+    date: null,
+    location: '',
+    type: 'class',
+  });
+  const [editFormErrors, setEditFormErrors] = useState<Record<string, string>>({});
+  const [editSubmitting, setEditSubmitting] = useState<boolean>(false);
+  const [editSuccess, setEditSuccess] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [eventToEdit, setEventToEdit] = useState<ScheduleEvent | null>(null);
 
   // Fetch schedules function
   const fetchSchedules = async (showRefreshAnimation = false) => {
@@ -488,7 +513,7 @@ const Schedules = () => {
       studentId: '',
       title: '',
       description: '',
-      date: null,
+      date: null, // Initialize as null
       location: '',
       type: 'class',
     });
@@ -536,10 +561,10 @@ const Schedules = () => {
   };
 
   // Handle date change from date picker
-  const handleDateChange = (newDate: Date | null) => {
+  const handleDateChange = (newDate: Dayjs | null) => {
     setFormData({
       ...formData,
-      date: newDate,
+      date: newDate, // Store Dayjs object
     });
     
     // Clear error for this field if it exists
@@ -596,7 +621,7 @@ const Schedules = () => {
           events: {
             title: formData.title,
             description: formData.description,
-            date: formData.date ? new Date(formData.date).toISOString().split('T')[0] : null, // Extract only the date part
+            date: formData.date ? formData.date.toISOString() : null, // Convert Dayjs to ISO string
             location: formData.location,
             type: formData.type,
           }
@@ -720,6 +745,172 @@ const Schedules = () => {
     setDeleteScheduleDialogOpen(true);
     setDeleteScheduleError(null);
     setDeleteScheduleSuccess(false);
+  };
+
+  // Function to open edit modal with event data
+  const handleOpenEditModal = (event: ScheduleEvent) => {
+    if (!isValidEvent(event)) {
+      console.error('Invalid event data:', event);
+      alert('Cannot edit this event due to invalid data.');
+      return;
+    }
+
+    setEventToEdit(event);
+    setEditFormData({
+      title: event.title,
+      description: event.description,
+      date: dayjs(event.date), // Convert string to Dayjs
+      location: event.location,
+      type: event.type,
+    });
+    setEditFormErrors({});
+    setEditSuccess(false);
+    setEditError(null);
+    setEditModalOpen(true);
+    // Close the event view modal if it's open
+    setViewEventModalOpen(false);
+  };
+
+  // Handle edit form input changes
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditFormData({
+      ...editFormData,
+      [name]: value,
+    });
+    
+    // Clear error for this field if it exists
+    if (editFormErrors[name]) {
+      setEditFormErrors({
+        ...editFormErrors,
+        [name]: '',
+      });
+    }
+  };
+
+  // Handle edit select input changes
+  const handleEditSelectChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+    const name = e.target.name as string;
+    const value = e.target.value;
+    
+    setEditFormData({
+      ...editFormData,
+      [name]: value,
+    });
+    
+    // Clear error for this field if it exists
+    if (editFormErrors[name]) {
+      setEditFormErrors({
+        ...editFormErrors,
+        [name]: '',
+      });
+    }
+  };
+
+  // Handle edit date change from date picker
+  const handleEditDateChange = (newDate: Dayjs | null) => {
+    setEditFormData({
+      ...editFormData,
+      date: newDate, // Store Dayjs object
+    });
+    
+    // Clear error for this field if it exists
+    if (editFormErrors['date']) {
+      setEditFormErrors({
+        ...editFormErrors,
+        date: '',
+      });
+    }
+  };
+
+  // Validate edit form before submission
+  const validateEditForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!editFormData.title) {
+      errors.title = 'Title is required';
+    }
+    
+    if (!editFormData.date) {
+      errors.date = 'Date and time are required';
+    }
+    
+    if (!editFormData.location) {
+      errors.location = 'Location is required';
+    }
+    
+    setEditFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle edit form submission
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!eventToEdit || !selectedSchedule) {
+      setEditError('Missing event or schedule information');
+      return;
+    }
+    
+    // Validate form
+    if (!validateEditForm()) {
+      return;
+    }
+    
+    setEditSubmitting(true);
+    setEditError(null);
+    
+    try {
+      await axios.put(
+        `${config.apiUrl}/api/schedules/events/${eventToEdit._id}`,
+        {
+          title: editFormData.title,
+          description: editFormData.description,
+          date: editFormData.date ? editFormData.date.toISOString() : null, // Convert Dayjs to ISO string
+          location: editFormData.location,
+          type: editFormData.type,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${Cookies.get('token')}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      // Show success message
+      setEditSuccess(true);
+      
+      // Refresh schedules after a short delay
+      setTimeout(() => {
+        fetchSchedules(true);
+        setEditModalOpen(false);
+      }, 1500);
+      
+    } catch (err: any) {
+      console.error('Error updating event:', err);
+      setEditError(err.response?.data?.message || 'Failed to update event');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  // Replace showNotImplementedMessage with handleOpenEditModal
+  // For the event details modal button
+  const handleEditEventFromDetails = () => {
+    if (selectedEvent) {
+      handleOpenEditModal(selectedEvent);
+    }
+  };
+
+  // Function to validate schedule data
+  const isValidSchedule = (schedule: Schedule): boolean => {
+    return schedule && schedule.studentId && schedule.studentId._id && schedule.studentId.name;
+  };
+
+  // Function to validate event data
+  const isValidEvent = (event: ScheduleEvent): boolean => {
+    return event && event._id && event.title && event.date;
   };
 
   return (
@@ -861,6 +1052,7 @@ const Schedules = () => {
               </TableHead>
               <TableBody>
                 {filteredSchedules
+                  .filter(isValidSchedule) // Skip invalid schedules
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((schedule) => {
                     // Skip rendering if schedule is invalid
@@ -968,11 +1160,11 @@ const Schedules = () => {
                       </TableRow>
                     );
                   })}
-                {filteredSchedules.length === 0 && (
+                {filteredSchedules.filter(isValidSchedule).length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} align="center" className="py-8">
                       <Typography variant="body1" color="textSecondary">
-                        No schedules found
+                        No valid schedules found
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -1208,7 +1400,7 @@ const Schedules = () => {
                 <Box mt={4} display="flex" justifyContent="space-between">
                   <Box display="flex" gap={2}>
                     <Button 
-                      onClick={() => showNotImplementedMessage("Edit")}
+                      onClick={handleEditEventFromDetails}
                       variant="outlined"
                       color="secondary"
                       startIcon={<EditIcon />}
@@ -1514,6 +1706,154 @@ const Schedules = () => {
               startIcon={submitting ? <CircularProgress size={20} /> : null}
             >
               {submitting ? 'Creating...' : 'Create Event'}
+            </Button>
+          </DialogActions>
+        </form>
+      </Dialog>
+
+      {/* Edit Event Modal */}
+      <Dialog
+        open={editModalOpen}
+        onClose={() => !editSubmitting && setEditModalOpen(false)}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          Edit Event
+        </DialogTitle>
+        <form onSubmit={handleEditSubmit}>
+          <DialogContent dividers>
+            {editSuccess && (
+              <Alert severity="success" sx={{ mb: 3 }}>
+                Event updated successfully!
+              </Alert>
+            )}
+            
+            {editError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {editError}
+              </Alert>
+            )}
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Event Title"
+                  name="title"
+                  value={editFormData.title}
+                  onChange={handleEditInputChange}
+                  error={!!editFormErrors.title}
+                  helperText={editFormErrors.title}
+                  disabled={editSubmitting}
+                  required
+                />
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth>
+                  <InputLabel id="edit-event-type-label">Event Type</InputLabel>
+                  <Select
+                    labelId="edit-event-type-label"
+                    id="type"
+                    name="type"
+                    value={editFormData.type}
+                    onChange={handleEditSelectChange as any}
+                    disabled={editSubmitting}
+                    label="Event Type"
+                  >
+                    <MenuItem value="class">
+                      <Box display="flex" alignItems="center">
+                        <SchoolIcon sx={{ mr: 1, color: 'primary.main' }} /> Class
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="exam">
+                      <Box display="flex" alignItems="center">
+                        <ExamIcon sx={{ mr: 1, color: 'error.main' }} /> Exam
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="assignment">
+                      <Box display="flex" alignItems="center">
+                        <AssignmentIcon sx={{ mr: 1, color: 'warning.main' }} /> Assignment
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="other">
+                      <Box display="flex" alignItems="center">
+                        <OtherIcon sx={{ mr: 1, color: 'info.main' }} /> Other
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DateTimePicker
+                    label="Date & Time"
+                    value={editFormData.date}
+                    onChange={handleEditDateChange}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        error: !!editFormErrors.date,
+                        helperText: editFormErrors.date,
+                        disabled: editSubmitting,
+                      },
+                    }}
+                  />
+                </LocalizationProvider>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Location"
+                  name="location"
+                  value={editFormData.location}
+                  onChange={handleEditInputChange}
+                  error={!!editFormErrors.location}
+                  helperText={editFormErrors.location}
+                  disabled={editSubmitting}
+                  required
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <LocationIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  name="description"
+                  value={editFormData.description}
+                  onChange={handleEditInputChange}
+                  disabled={editSubmitting}
+                  multiline
+                  rows={4}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setEditModalOpen(false)}
+              disabled={editSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={editSubmitting}
+              startIcon={editSubmitting ? <CircularProgress size={20} /> : null}
+            >
+              {editSubmitting ? 'Updating...' : 'Update Event'}
             </Button>
           </DialogActions>
         </form>
