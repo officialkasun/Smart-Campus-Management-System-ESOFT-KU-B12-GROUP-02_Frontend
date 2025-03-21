@@ -628,10 +628,14 @@ const Schedules = () => {
 
   // Function to handle deleting an event
   const handleDeleteEvent = async () => {
-
-   let studentId = selectedSchedule.studentId._id;
-  
-    if (!eventToDelete) return;
+    if (!eventToDelete || !selectedSchedule || !selectedSchedule.studentId) return;
+    
+    let studentId = selectedSchedule.studentId._id;
+    
+    if (!studentId) {
+      setDeleteError("Could not retrieve student ID");
+      return;
+    }
     
     setDeleteLoading(true);
     setDeleteError(null);
@@ -711,6 +715,7 @@ const Schedules = () => {
 
   // Function to open delete schedule confirmation dialog
   const openDeleteScheduleDialog = (schedule: Schedule) => {
+    if (!schedule) return;
     setScheduleToDelete(schedule);
     setDeleteScheduleDialogOpen(true);
     setDeleteScheduleError(null);
@@ -858,6 +863,12 @@ const Schedules = () => {
                 {filteredSchedules
                   .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                   .map((schedule) => {
+                    // Skip rendering if schedule is invalid
+                    if (!schedule || !schedule.studentId) {
+                      console.error('Invalid schedule data:', schedule);
+                      return null;
+                    }
+                    
                     // Find the next upcoming event
                     const upcomingEvents = schedule.events
                       .filter(event => isUpcomingEvent(event.date))
@@ -873,14 +884,14 @@ const Schedules = () => {
                         <TableCell>
                           <Box display="flex" alignItems="center">
                             <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main' }}>
-                              {schedule.studentId.name.charAt(0)}
+                              {schedule.studentId.name ? schedule.studentId.name.charAt(0) : '?'}
                             </Avatar>
                             <Box>
                               <Typography variant="body2" className="font-medium">
-                                {schedule.studentId.name}
+                                {schedule.studentId.name || 'Unknown Student'}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                {schedule.studentId.email}
+                                {schedule.studentId.email || 'No email'}
                               </Typography>
                             </Box>
                           </Box>
@@ -989,21 +1000,21 @@ const Schedules = () => {
         aria-labelledby="schedule-details-modal"
       >
         <div className="bg-white dark:bg-gray-800 w-full max-w-2xl p-6 m-auto rounded-md shadow-lg absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 max-h-[90vh] overflow-y-auto">
-          {selectedSchedule && (
+          {selectedSchedule && selectedSchedule.studentId ? (
             <Card className="shadow-none">
               <CardContent className="p-6">
                 <Box display="flex" alignItems="center" mb={3}>
                   <Avatar 
                     sx={{ width: 56, height: 56, mr: 2, bgcolor: 'primary.main' }}
                   >
-                    {selectedSchedule.studentId.name.charAt(0)}
+                    {selectedSchedule.studentId.name ? selectedSchedule.studentId.name.charAt(0) : '?'}
                   </Avatar>
                   <Box>
                     <Typography variant="h6" className="font-bold">
-                      {selectedSchedule.studentId.name}
+                      {selectedSchedule.studentId.name || 'Unknown Student'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {selectedSchedule.studentId.email}
+                      {selectedSchedule.studentId.email || 'No email'}
                     </Typography>
                   </Box>
                 </Box>
@@ -1092,6 +1103,8 @@ const Schedules = () => {
                 </Box>
               </CardContent>
             </Card>
+          ) : (
+            <Typography color="error">Invalid schedule data</Typography>
           )}
         </div>
       </Modal>
@@ -1293,10 +1306,10 @@ const Schedules = () => {
                 </Alert>
               )}
               <Typography>
-                Are you sure you want to delete the entire schedule for student <strong>{scheduleToDelete?.studentId.name}</strong>?
+                Are you sure you want to delete the entire schedule for student <strong>{scheduleToDelete?.studentId?.name || 'Unknown Student'}</strong>?
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                This will delete all {scheduleToDelete?.events.length} events in this schedule. This action cannot be undone.
+                This will delete all {scheduleToDelete?.events?.length || 0} events in this schedule. This action cannot be undone.
               </Typography>
             </>
           )}
